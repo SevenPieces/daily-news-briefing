@@ -203,7 +203,10 @@ English; China content is Chinese. Structural labels are bilingual.
   failed briefing, not a stylistic choice. When an aspect carries two or more
   items, prefer at least two outlets; a single-outlet aspect stays a note, so
   rebalance it where a credible second outlet exists rather than dropping the
-  story.
+  story. If no different-outlet alternate exists, keep the stories and leave the
+  note. Never drop a story to clear a note, and never relabel a republished page
+  as a different outlet - the label must name the outlet that published the page
+  you cite.
 - The coverage note repeats the header window **verbatim** (same dates and times
   in Asia/Shanghai as the label in parentheses), so the header and the note can
   never disagree about the window.

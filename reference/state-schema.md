@@ -69,6 +69,33 @@ story). It stays while it has activity inside the window or until 7 days after
 firstSeen, whichever comes first. Watchlist entries only appear in a briefing
 when the item also has a new development in the current window.
 
+## Items input (update --items)
+
+`update` takes the run's curated items array: a JSON array with one object per
+story in the briefing.
+
+    [
+      {
+        "title": "Headline as written in the briefing",
+        "section": "global",
+        "aspect": "economy",
+        "outlet": "BBC",
+        "primaryUrl": "https://...",
+        "flags": ["new"],
+        "watch": false
+      }
+    ]
+
+- `title` and `primaryUrl` determine the story key (see Story key); both are
+  required.
+- `section`, `aspect` and `outlet` are recorded on the entry; `outlet` is merged
+  into the entry's `outlets` list across runs.
+- `flags` and `watch` are read from the item on every run and do not carry over:
+  a story that should stay on the watchlist must be flagged watch: true again
+  each time it appears. Omitting `flags` clears them.
+- The file is a run artifact: written by the agent each run, overwritten each
+  run, and never read by the renderer. It is not part of the deliverable.
+
 ## Commands
 
 | Command | Purpose |

@@ -7,6 +7,48 @@
 import { writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
+// ---------------------------------------------------------------------------
+// Brent contract months.
+//
+// Yahoo's front-month alias `BZ=F` tracks the *most-active* NYMEX Brent
+// contract, which can run ahead of the true near-month: on 2026-09-22 it
+// resolved to Dec 2026 while the near-month was still Nov 2026 (100.54 vs
+// 96.42), so the alias silently published the wrong contract under a generic
+// "Brent crude" label.
+//
+// Name the two nearest contracts explicitly instead, and carry the month in the
+// label so a roll is always visible rather than silent.
+//
+// A Brent contract expires on the last business day of the second month before
+// its delivery month, so during any month the near-month delivery month is
+// `current + 2` and the next is `current + 3`. Deriving this from the current
+// date means both rows roll on their own at each month boundary.
+// ---------------------------------------------------------------------------
+const MONTH_CODE = ['F','G','H','J','K','M','N','Q','U','V','X','Z'];
+const MONTH_NAME = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// The briefing is dated in Asia/Shanghai, so resolve the contract month there.
+function shanghaiYearMonth(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit',
+  }).format(now).split('-');
+  return { year: Number(parts[0]), month: Number(parts[1]) };
+}
+
+function brentContract(ahead) {
+  const { year, month } = shanghaiYearMonth();
+  const total = year * 12 + (month - 1) + ahead;
+  const y = Math.floor(total / 12);
+  const m = (total % 12) + 1;
+  return {
+    symbol: 'BZ' + MONTH_CODE[m - 1] + String(y % 100).padStart(2, '0') + '.NYM',
+    label: 'Brent crude (' + MONTH_NAME[m - 1] + ' ' + y + ')',
+  };
+}
+
+const BRENT_NEAR = brentContract(2);
+const BRENT_NEXT = brentContract(3);
+
 const YAHOO = {
   sp500:  { symbol: '^GSPC',     label: 'S&P 500',            group: 'US equities',     region: 'global' },
   nasdaq: { symbol: '^IXIC',     label: 'Nasdaq',             group: 'US equities',     region: 'global' },
@@ -23,8 +65,9 @@ const YAHOO = {
   dxy:    { symbol: 'DX-Y.NYB',  label: 'US Dollar Index',    group: 'FX',              region: 'global' },
   eurusd: { symbol: 'EURUSD=X',  label: 'EUR/USD',            group: 'FX',              region: 'global' },
   usdjpy: { symbol: 'JPY=X',     label: 'USD/JPY',            group: 'FX',              region: 'global' },
-  usdcny: { symbol: 'CNY=X',     label: 'USD/CNY',            group: 'FX',              region: 'global' },
-  brent:  { symbol: 'BZ=F',      label: 'Brent crude',        group: 'Commodities',     region: 'global' },
+  usdcnh: { symbol: 'CNH=X',     label: 'USD/CNH',            group: 'FX',              region: 'global' },
+  brent:     { symbol: BRENT_NEAR.symbol, label: BRENT_NEAR.label, group: 'Commodities', region: 'global' },
+  brentNext: { symbol: BRENT_NEXT.symbol, label: BRENT_NEXT.label, group: 'Commodities', region: 'global' },
   wti:    { symbol: 'CL=F',      label: 'WTI crude',          group: 'Commodities',     region: 'global' },
   gold:   { symbol: 'GC=F',      label: 'Gold',               group: 'Commodities',     region: 'global' },
   copper: { symbol: 'HG=F',      label: 'Copper',             group: 'Commodities',     region: 'global' },

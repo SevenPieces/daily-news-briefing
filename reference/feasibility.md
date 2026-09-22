@@ -25,8 +25,22 @@ rather than failing the whole run.
 ## Market data
 
 - Yahoo Finance chart endpoint covers: ^GSPC, ^IXIC, ^DJI, ^FTSE, ^GDAXI, ^FCHI,
-  ^N225, ^KS11, ^HSI, DX-Y.NYB, EURUSD=X, JPY=X, CNY=X, BZ=F, CL=F, GC=F, HG=F,
-  ^TNX, 000001.SS, 000300.SS, 399001.SZ.
+  ^N225, ^KS11, ^HSI, DX-Y.NYB, EURUSD=X, JPY=X, CNH=X, CL=F, GC=F, HG=F, ^TNX,
+  000001.SS, 000300.SS, 399001.SZ.
+- Yahoo also serves per-contract Brent symbols (BZ plus the month code plus a
+  two-digit year plus .NYM); expired contracts return HTTP 404. The BZ=F
+  front-month alias tracks the *most-active* contract, which can run a month
+  ahead of the near-month (on 2026-09-22 it resolved to Dec 2026 while the
+  near-month was Nov 2026, 96.42 vs 100.54), so collect-markets.mjs names the
+  two nearest contracts explicitly and puts the month in the row label.
+- Onshore CNY spot does not open until 09:30 Asia/Shanghai, and Yahoo's CNY=X
+  can emit an isolated thin print before then: at 2026-09-22 08:24 it read
+  6.6845 while the continuously-traded offshore CNH was 6.6919, and the onshore
+  market was shut. The FX row therefore uses CNH=X (USD/CNH), which trades
+  around the clock.
+- WTI (CL=F), gold (GC=F) and copper (HG=F) keep the front-month alias because
+  for those the front month is the volume leader; the misalignment above is
+  specific to the secondary NYMEX Brent listing.
 - Eastmoney ulist endpoint returns bond yields; collect-markets.mjs wires in only
   171.CN10Y (10Y China govt bond). The value is f2 scaled by 10^f1, so CN10Y reads
   about 1.6927. US 10Y comes from Yahoo (^TNX), not Eastmoney.

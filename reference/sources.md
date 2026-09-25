@@ -57,6 +57,62 @@ subscription outlets #paywalled.
 
 Weibo hot search is unusable: it returns 302 to a login wall.
 
+## UA-sensitive outlets - vary the profile, never record as blocked
+
+Some outlets answer 403 to one header profile and serve the page to another, and
+a browser User-Agent is NOT automatically the better one. Measured 2026-09-25 on
+live article pages:
+
+| Outlet | plain curl (default UA) | curl + browser UA | harness fetch | behaviour |
+|---|---|---|---|---|
+| France 24 | 200 | 403 | 200 or 404 | 200 with the DEFAULT User-Agent, including `datePublished`; the Chrome User-Agent is rejected |
+
+That is a profile preference, not a block. Treat France 24 as a fetch-verified
+primary, and vary the header profile rather than simply retrying.
+
+## Licensing gates - do not attempt to fetch
+
+NPR answers **402 from TollBit** ("not authorized ... without a valid TollBit
+Token") to every automated profile tried: curl's default User-Agent, a Chrome
+User-Agent, and the harness fetch. That is a content-licensing control, not a
+flaky CDN, so do **not** try to defeat it. Cite NPR from its own RSS as
+`[prov:feed]`, which is a legitimate dated primary. An NPR article page is not
+a fetch target. (Earlier runs recorded NPR as "feed-only by design"; the accurate
+reason is a licence gate.)
+
+## Reading an article page
+
+Use `scripts/fetch-page.mjs`, which varies the header profile and transport,
+and reports which date field it used:
+
+~~~sh
+node "$SKILL/scripts/fetch-page.mjs" <url> [<url> ...] [--retries 2] [--timeout 25000] [--text] [--out FILE]
+~~~
+
+`--retries` counts ROUNDS, not requests: each round tries 2 header profiles
+(browser, then a plain profile that overrides no User-Agent) across 2 transports
+(fetch, curl). The default of 2 rounds is therefore up to 8 requests per URL.
+A 402 is treated as final and is never retried, so a licensing gate costs one
+request, not eight.
+
+It prints JSON per URL: `url`, `ok`, `status`, `attempts`, `via`, `profile`,
+`title`, `publishedAt`, `dateSource`, `bytes`, `textLength` - and `error`
+instead of the content fields when a URL could not be fetched. `--text` adds the
+stripped page text; `--out FILE` writes the JSON to a file. The top level also
+carries `rounds` and `profiles`. It exits 0 only when every URL was fetched, 1
+when any failed, and 2 on a usage error or an unreadable file.
+
+- **Vary the profile before concluding "blocked".** One failed attempt is
+  evidence of nothing - but a 402 from a licensing gate is an answer, not a
+  challenge.
+- **Prefer `datePublished` over `dateModified`.** That is why `dateSource` is
+  reported: a page's modification time is later than its publication time and
+  will silently move an item across the coverage window. When `dateSource` is
+  `dateModified`, cite the outlet's RSS `pubDate` instead.
+- `web_fetch` remains a valid fallback when the script cannot reach a page.
+- A page you actually retrieved is `[prov:full]`; a publisher RSS abstract is
+  `[prov:feed]`. Neither is second-class - the marker states depth only.
+
 ## Tier 2 - blocked originals (corroborated alt links)
 
 Reuters (401), AP (403 Cloudflare), FT (403 Security Verification) and WSJ (401)
@@ -78,6 +134,12 @@ never resolve to the publisher (they stay on news.google.com), so never cite the
 For an older wire story, one archive read may verify it:
 `https://web.archive.org/web/2/<url>` (same-day stories are usually not archived).
 If no canonical URL exists, cite a `[find:AP](google-search-url)` search fallback.
+
+**Sky News is a third shape.** Its article pages return a hard 403 from an
+Akamai edge block to plain curl, browser-header curl and the harness fetch
+alike, and the article probed had no Wayback snapshot. Its publisher RSS is
+healthy and dated, so Sky News items are cited from the feed as `[prov:feed]` -
+contribute them, do not drop them.
 
 ## Known stale or dead feeds - do not use
 

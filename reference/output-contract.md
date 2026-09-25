@@ -16,7 +16,7 @@ Deliver only the HTML. Keep the Markdown and state on disk.
     _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00) - 48h not covered_
 
     ## Top stories / 今日要闻
-    - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) #new
+    - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) #new [prov:feed]
 
     ## Market snapshot / 市场快照
     | Market | Level | Chg | As of |
@@ -26,17 +26,17 @@ Deliver only the HTML. Keep the Markdown and state on disk.
 
     ## Global
     ### Economy
-    - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) [alt:SCMP](https://secondary) #new
+    - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) [alt:SCMP](https://secondary) #new [prov:feed]
 
     ### Politics
     (quiet - no significant news today)
 
     ## China / 中国
     ### 经济
-    - **标题** - 摘要。 [src:财新 2026-09-10 09:30](https://primary) #followup
+    - **标题** - 摘要。 [src:财新 2026-09-10 09:30](https://primary) #followup [prov:full]
 
     ## Watchlist / 持续关注
-    - **Headline** - one line on what is unresolved. [src:...](...)
+    - **Headline** - one line on what is unresolved. [src:...](...) [prov:feed]
 
     ## Coverage note / 覆盖说明
     ...
@@ -49,7 +49,7 @@ Deliver only the HTML. Keep the Markdown and state on disk.
 
 Every story is exactly one Markdown list item:
 
-    - **Headline** - Summary sentence(s). [src:OUTLET YYYY-MM-DD HH:MM](PRIMARY_URL) [alt:OUTLET2](SECONDARY_URL) #tag #tag
+    - **Headline** - Summary sentence(s). [src:OUTLET YYYY-MM-DD HH:MM](PRIMARY_URL) [alt:OUTLET2](SECONDARY_URL) #tag #tag [prov:MARKER]
 
 - The heading is bold and contains no links.
 - The summary is one or two sentences in the section language.
@@ -62,8 +62,11 @@ Every story is exactly one Markdown list item:
 - `[find:OUTLET](SEARCH_URL)` is an optional, clearly-labelled search fallback
   for a blocked wire outlet whose canonical URL could not be resolved. It renders
   as a dashed "search" badge.
-- An optional provenance marker ends the line: `[prov:full]`, `[prov:feed]` or
-  `[prov:link]`. It renders as a coloured dot, not as text.
+- A provenance marker is **required** and is the final token on the line:
+  `[prov:full]`, `[prov:feed]` or `[prov:link]`, exactly one per story. Trailing
+  `#tags` after the marker are also accepted. It renders as a coloured dot, not
+  as text. `scripts/check-provenance.mjs` enforces this and exits non-zero when a
+  story has no marker, more than one, or a marker that is not the last token.
 
 ## Provenance and read-original
 

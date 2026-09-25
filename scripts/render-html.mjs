@@ -180,7 +180,13 @@ let tableRows = [];
 let secIndex = -1;
 let aspIndex = -1;
 let currentAspect = '';
+let currentSection = '';
 let storyIndex = 0;
+
+// A bullet in these sections is a list entry, never a story card, so it must
+// not be measured against the provenance contract. Kept in step with the same
+// list in scripts/check-provenance.mjs.
+const NON_STORY_SECTION = /^(Sources|Coverage note|Market snapshot)/i;
 
 function flushList() { if (inList) { html.push('</ul>'); inList = false; } }
 function flushPlain() { if (inPlain) { html.push('</ul>'); inPlain = false; } }
@@ -204,6 +210,7 @@ for (const raw of lines) {
     closeSection(); flushTable();
     secIndex++;
     const name = line.slice(3).trim();
+    currentSection = name;
     const id = 's' + secIndex;
     topics.push({ level: 2, id, name });
     html.push('<section class="sec" id="' + id + '"><h2>' + esc(name) + '</h2>');
@@ -232,7 +239,7 @@ for (const raw of lines) {
 
   if (line.startsWith('- ')) {
     flushTable(); flushPlain();
-    const isStory = line.includes('[src:') || line.trim().startsWith('- **');
+    const isStory = !NON_STORY_SECTION.test(currentSection) && (line.includes('[src:') || line.trim().startsWith('- **'));
     if (isStory) {
       if (!inList) { html.push('<ul class="stories">'); inList = true; }
       storyIndex++;

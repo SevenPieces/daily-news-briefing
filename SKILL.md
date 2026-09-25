@@ -116,7 +116,11 @@ primary).
 
 ### Step 4 - Research both sections
 
-Use web_search for discovery and web_fetch to read candidate articles. Cover
+Use web_search for discovery, then read candidate articles with
+`scripts/fetch-page.mjs` (it varies the header profile and the transport, so a
+UA-sensitive gate does not read as a block, and it reports which date field it
+used); `web_fetch` remains a valid fallback. It never retries a 402: that is a
+licensing answer, not a transient failure. Cover
 both sections across all seven aspects, respecting the budget. Fan out with
 subagents if it helps, but each item must end with a fetched, date-stamped
 primary: a fetched article, a publisher's own RSS item, or - for blocked wire
@@ -162,6 +166,7 @@ Write "$OUT/briefing-$DATE.md" in the exact structure in
 ~~~sh
 node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
 node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"   # must print DIVERSITY: OK
+node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md" # must print PROVENANCE: OK
 node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/briefing-$DATE.html"
 ~~~
 
@@ -176,7 +181,7 @@ The full grammar is in `reference/output-contract.md`. In short: a title, a
 metadata line with the window label, then Top stories, Market snapshot, the two
 aspect sections, Watchlist, Coverage note and Sources. Each story is one line:
 
-    - **Headline** - Summary. [src:OUTLET 2026-09-10 09:30](https://primary) [alt:OUTLET2](https://secondary) #new
+    - **Headline** - Summary. [src:OUTLET 2026-09-10 09:30](https://primary) [alt:OUTLET2](https://secondary) #new [prov:feed]
 
 Tags: #new, #followup, #developing, #paywalled, #unverified. Global content is
 English; China content is Chinese. Structural labels are bilingual.
@@ -191,10 +196,13 @@ English; China content is Chinese. Structural labels are bilingual.
   cited as an `[alt:...]` link, not a Google News redirect.
 - Market rows cover every instrument the collector returned, in its order, each with an as-of time; yield rows use basis points (changeBp); unavailable instruments are labelled.
 - Top stories are the 3-5 most corroborated items.
-- Every story carries a provenance marker: `[prov:full]` only for pages actually
-  fetched, `[prov:feed]` for publisher RSS, `[prov:link]` for headline+link
-  only. #paywalled items carry the publisher's own feed abstract, never
-  paraphrased locked text.
+- Every story carries exactly one provenance marker: `[prov:full]` only for
+  pages actually fetched, `[prov:feed]` for publisher RSS, `[prov:link]` for
+  headline+link only. #paywalled items carry the publisher's own feed abstract,
+  never paraphrased locked text. Run
+  `node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md"` after
+  writing the Markdown; it exits non-zero on any story missing a marker or
+  carrying more than one.
 - Source diversity: neither section may rest on a single outlet. Run
   `node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"` after
   writing the Markdown; it exits non-zero when a section's primaries are all one

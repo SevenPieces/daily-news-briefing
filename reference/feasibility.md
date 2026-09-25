@@ -1,7 +1,7 @@
 # Feasibility notes and probe evidence
 
-Recorded 2026-09-10. Re-run the probes below before changing the
-source tiers.
+Recorded 2026-09-10; the hard-block, UA-sensitive and licensing rows were
+re-probed 2026-09-25. Re-run the probes below before changing the source tiers.
 
 ## Environment
 
@@ -16,8 +16,10 @@ rather than failing the whole run.
 
 ## web_fetch versus curl
 
-- web_fetch reached SCMP (200) where curl got 403, so prefer web_fetch for
-  article reads.
+- Read article pages with `scripts/fetch-page.mjs`, which varies the header
+  profile and transport; harvest `web_fetch` as the fallback. web_fetch reached
+  SCMP (200) where header-less curl got 403, which is exactly why the profile is
+  varied rather than assumed.
 - web_fetch does not follow a cross-origin http-to-https redirect; use the https
   URL directly (for example pbc.gov.cn).
 - web_fetch truncates very large pages near 100000 characters.
@@ -48,11 +50,36 @@ rather than failing the whole run.
 
 ## Blocked or dead
 
+### Hard blocks - no article access by any route (probed 2026-09-25)
+
 | Target | Result |
 |---|---|
-| reuters.com | 401 to curl and web_fetch |
-| apnews.com | 403 Cloudflare |
-| ft.com | 403 |
+| reuters.com | 401 to curl and the harness fetch; RSS discontinued |
+| apnews.com | 403 Cloudflare; RSS 403 |
+| ft.com | 403; RSS returns a single item |
+| wsj.com | 401; RSS stale since Jan 2025 |
+| news.sky.com article pages | 403 from an Akamai edge block to plain curl, browser-header curl and the harness fetch alike; the probed article had no Wayback snapshot. The publisher RSS is healthy and dated, so Sky News items are cited from the feed as `[prov:feed]` rather than dropped |
+
+### UA-sensitive outlets - vary the profile, never record as blocked (probed 2026-09-25)
+
+| Target | Result |
+|---|---|
+| france24.com article pages | UA-sensitive, inversely to the usual assumption: curl's DEFAULT User-Agent returns 200 with the full page and `datePublished`, while a Chrome User-Agent gets 403. Not gated - treat as fetch-verified |
+
+A single failed attempt is not evidence of a block. Reading a UA-sensitive
+outlet as a block downgrades a readable article to a feed-only summary, which is
+how France 24 came to be recorded here as exposing no date.
+
+### Licensing gates - do not attempt to fetch (probed 2026-09-25)
+
+| Target | Result |
+|---|---|
+| npr.org article pages | 402 TollBit ("not authorized ... without a valid TollBit Token") on every automated profile tried, and on 20/20 requests in a bounded retry run. A content-LICENSING control, not a flaky gate: do not defeat it. Cite NPR from its own RSS as `[prov:feed]` (verified present with a matching pubDate in the topical feed, e.g. `feeds.npr.org/1128/rss.xml`) |
+
+### Dead feeds and endpoints
+
+| Target | Result |
+|---|---|
 | s.weibo.com/top/summary | 302 to login |
 | stooq.com CSV | endpoint removed |
 | People's Daily RSS | newest item 2025-06-05 |

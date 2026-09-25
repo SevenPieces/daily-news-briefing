@@ -86,16 +86,20 @@ function strip(html) {
     .replace(/\s+/g, ' ').trim();
 }
 
-function firstMatch(text, patterns) {
-  for (const [re, source] of patterns) {
-    const m = re.exec(text);
-    if (m && m[1]) return { value: m[1].trim(), source };
-  }
-  return { value: null, source: null };
+// A candidate date is only usable if it actually parses as one. Pages that ship
+// un-rendered templates - for example <time datetime="${i}"> - otherwise yield a
+// placeholder string as publishedAt, which reads to a downstream consumer as a
+// real publication time. Observed live on a CNN video page, 2026-09-25.
+function isPlausibleDate(value) {
+  if (typeof value !== 'string') return false;
+  const v = value.trim();
+  if (v.length < 8) return false;
+  if (/[$<>{}%]/.test(v)) return false;
+  return Number.isFinite(Date.parse(v));
 }
 
 function extractDate(html) {
-  return firstMatch(html, [
+  const patterns = [
     [/"datePublished"\s*:\s*"([^"]+)"/, 'datePublished'],
     [/property=["']article:published_time["'][^>]*content=["']([^"']+)["']/, 'article:published_time'],
     [/content=["']([^"']+)["'][^>]*property=["']article:published_time["']/, 'article:published_time'],
@@ -103,7 +107,16 @@ function extractDate(html) {
     [/<meta[^>]+name=["'](?:pubdate|publish-date|date)["'][^>]*content=["']([^"']+)["']/i, 'meta:pubdate'],
     [/<time[^>]+datetime=["']([^"']+)["']/, 'time[datetime]'],
     [/"dateModified"\s*:\s*"([^"]+)"/, 'dateModified'],
-  ]);
+  ];
+  const rejected = [];
+  for (const [re, source] of patterns) {
+    const m = re.exec(html);
+    if (!m || !m[1]) continue;
+    const value = m[1].trim();
+    if (isPlausibleDate(value)) return { value, source, rejected };
+    rejected.push(value.slice(0, 40));
+  }
+  return { value: null, source: null, rejected };
 }
 
 function extractTitle(html) {
@@ -164,6 +177,7 @@ async function fetchOne(url, rounds, ms, wantText) {
             const out = {
               url, ok: true, status: r.status, attempts, via: r.via, profile: profile.name,
               title: extractTitle(r.body), publishedAt: date.value, dateSource: date.source,
+              ...(date.rejected.length ? { dateRejected: date.rejected } : {}),
               bytes: r.body.length, textLength: strip(r.body).length,
             };
             if (wantText) out.text = strip(r.body).slice(0, 1500);

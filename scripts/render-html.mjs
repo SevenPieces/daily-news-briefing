@@ -188,6 +188,11 @@ let storyIndex = 0;
 // list in scripts/check-provenance.mjs.
 const NON_STORY_SECTION = /^(Sources|Coverage note|Market snapshot)/i;
 
+// The one-line provenance key, repeated under every story-bearing section
+// heading so a reader has it in view without hovering a dot. Sections excluded
+// by NON_STORY_SECTION carry no dots, so they get no key.
+const PROV_KEY = '<p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>';
+
 function flushList() { if (inList) { html.push('</ul>'); inList = false; } }
 function flushPlain() { if (inPlain) { html.push('</ul>'); inPlain = false; } }
 function flushTable() { if (tableRows.length) { html.push(renderTable(tableRows)); tableRows = []; } }
@@ -213,7 +218,8 @@ for (const raw of lines) {
     currentSection = name;
     const id = 's' + secIndex;
     topics.push({ level: 2, id, name });
-    html.push('<section class="sec" id="' + id + '"><h2>' + esc(name) + '</h2>');
+    html.push('<section class="sec" id="' + id + '"><h2>' + esc(name) + '</h2>'
+      + (NON_STORY_SECTION.test(name) ? '' : PROV_KEY));
     openSection = true;
     continue;
   }
@@ -341,7 +347,7 @@ const js = [
   '})();',
 ].join('\n');
 
-const doc = '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>' + esc(title) + '</title>\n<style>\n' + css + '\n</style>\n</head>\n<body id="top">\n<header class="top"><div class="wrap"><h1>' + esc(title) + '</h1><p class="meta">' + esc(meta) + '</p><p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p><div class="controls"><input id="q" type="search" placeholder="Search / 搜索"><label class="tog"><input type="checkbox" id="collapse"> collapse all / 折叠全部</label></div><nav class="topics">' + topicsHtml + '</nav></div></header>\n\n<main>\n' + body + '\n</main>\n<script>\n' + js + '\n</script>\n<a id="toTop" href="#top" aria-label="Back to top" title="Back to top / 回到顶部">&#8593;</a>\n</body>\n</html>\n';
+const doc = '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>' + esc(title) + '</title>\n<style>\n' + css + '\n</style>\n</head>\n<body id="top">\n<header class="top"><div class="wrap"><h1>' + esc(title) + '</h1><p class="meta">' + esc(meta) + '</p><div class="controls"><input id="q" type="search" placeholder="Search / 搜索"><label class="tog"><input type="checkbox" id="collapse"> collapse all / 折叠全部</label></div><nav class="topics">' + topicsHtml + '</nav></div></header>\n\n<main>\n' + body + '\n</main>\n<script>\n' + js + '\n</script>\n<a id="toTop" href="#top" aria-label="Back to top" title="Back to top / 回到顶部">&#8593;</a>\n</body>\n</html>\n';
 
 writeFileSync(outPath, doc);
 process.stdout.write(JSON.stringify({ out: outPath, bytes: doc.length, stories: storyIndex, sections: secIndex + 1, aspects: aspIndex + 1 }) + '\n');

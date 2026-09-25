@@ -43,6 +43,7 @@ li.story{background:var(--panel2);border:1px solid var(--line);border-radius:8px
 .t-developing{background:#3a230d;color:#ffb27a;} .t-paywalled{background:#2b1d33;color:#d9a7ff;}
 .t-unverified{background:#3a1517;color:#ff9d9d;}
 .prov{width:9px;height:9px;border-radius:999px;display:inline-block;flex:0 0 auto;} .p-full{background:#2ea043;} .p-feed{background:#4da3ff;} .p-link{background:#d29922;}
+.provkey{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:8px 0 0;font-size:12px;color:var(--dim);} .provkey .sep{opacity:.5;margin:0 4px;}
 .orig{font-size:12px;color:var(--acc);}
 .tablewrap{overflow-x:auto;} table{border-collapse:collapse;width:100%;font-size:14px;}
 th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;} th{background:var(--panel2);}
@@ -57,7 +58,7 @@ ul.plain{margin:6px 0 6px 18px;}
 
 <main>
 <p class="quiet">(ILLUSTRATIVE EXAMPLE - every story below is placeholder text, not real news.)</p>
-<section class="sec" id="s0"><h2>Top stories / 今日要闻</h2>
+<section class="sec" id="s0"><h2>Top stories / 今日要闻</h2><p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>
 <ul class="stories">
 <li class="story" id="it-1"><div class="hlrow"><span class="prov p-link" title="Link only: open the original to read"></span><a class="hl" href="https://example.com/a" target="_blank" rel="noopener">[EXAMPLE] Central bank holds rates steady</a></div><p class="sum">Policymakers left the benchmark rate unchanged and signalled patience.</p><div class="badges"><a class="badge src" href="https://example.com/a" target="_blank" rel="noopener">EXAMPLE WIRE 2026-09-10 09:30</a><span class="tag t-new">new</span></div></li>
 <li class="story" id="it-2"><div class="hlrow"><span class="prov p-feed" title="Publisher feed: summary from the outlet own RSS"></span><a class="hl" href="https://example.com/b" target="_blank" rel="noopener">[EXAMPLE] Chip export rules tightened</a></div><p class="sum">New licensing requirements target advanced packaging tools.</p><div class="badges"><a class="badge src" href="https://example.com/b" target="_blank" rel="noopener">EXAMPLE NEWS 2026-09-10 07:10</a><a class="badge alt" href="https://example.com/c" target="_blank" rel="noopener">EXAMPLE POST</a><span class="tag t-followup">followup</span></div></li>
@@ -66,7 +67,7 @@ ul.plain{margin:6px 0 6px 18px;}
 <section class="sec" id="s1"><h2>Market snapshot / 市场快照</h2>
 <div class="tablewrap"><table><thead><tr><th>Market</th><th>Level</th><th>Chg</th><th>As of</th></tr></thead><tbody><tr><td>S&amp;P 500</td><td>7636.36</td><td>-0.48%</td><td>2026-09-10 04:03</td></tr><tr><td>10Y China govt bond</td><td>1.6927</td><td>n/a</td><td>2026-09-10 17:30</td></tr></tbody></table></div>
 </section>
-<section class="sec" id="s2"><h2>Global</h2>
+<section class="sec" id="s2"><h2>Global</h2><p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>
 <details class="aspect" id="a0" open><summary><span class="ah">Economy</span><span class="count">2</span></summary><div class="aspect-body">
 <ul class="stories">
 <li class="story" id="it-3"><div class="hlrow"><span class="prov p-link" title="Link only: open the original to read"></span><a class="hl" href="https://example.com/d" target="_blank" rel="noopener">[EXAMPLE] Trade talks resume</a></div><p class="sum">Negotiators returned to the table with a narrowed agenda.</p><div class="badges"><a class="badge src" href="https://example.com/d" target="_blank" rel="noopener">EXAMPLE WIRE 2026-09-10 08:00</a><span class="tag t-developing">developing</span></div></li>
@@ -82,7 +83,7 @@ ul.plain{margin:6px 0 6px 18px;}
 </ul>
 </div></details>
 </section>
-<section class="sec" id="s3"><h2>China / 中国</h2>
+<section class="sec" id="s3"><h2>China / 中国</h2><p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>
 <details class="aspect" id="a3" open><summary><span class="ah">经济</span><span class="count">2</span></summary><div class="aspect-body">
 <ul class="stories">
 <li class="story" id="it-6"><div class="hlrow"><span class="prov p-full" title="Verified: full article fetched"></span><a class="hl" href="https://example.com/g" target="_blank" rel="noopener">[示例] 制造业景气回升</a></div><p class="sum">最新数据显示制造业活动连续第二个月扩张。</p><div class="badges"><a class="badge src" href="https://example.com/g" target="_blank" rel="noopener">示例财经 2026-09-10 09:30</a><span class="tag t-new">new</span></div></li>
@@ -98,7 +99,7 @@ ul.plain{margin:6px 0 6px 18px;}
 <p class="quiet">(无重大新闻)</p>
 </div></details>
 </section>
-<section class="sec" id="s4"><h2>Watchlist / 持续关注</h2>
+<section class="sec" id="s4"><h2>Watchlist / 持续关注</h2><p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>
 <ul class="stories">
 <li class="story" id="it-9"><div class="hlrow"><span class="prov p-link" title="Link only: open the original to read"></span><a class="hl" href="https://example.com/d" target="_blank" rel="noopener">[EXAMPLE] Trade talks resume</a></div><p class="sum">Whether the narrowed agenda produces a framework this week.</p><div class="badges"><a class="badge src" href="https://example.com/d" target="_blank" rel="noopener">EXAMPLE WIRE</a><span class="tag t-developing">developing</span></div></li>
 </ul>

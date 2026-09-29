@@ -207,6 +207,14 @@ do fan out, remember that a subagent is a fresh agent with no memory of this
 skill: give it the resolved absolute path (for example
 `/.../briefings/.staging/2026-09-29`) rather than the variable name `$STAGE`,
 which a fresh shell cannot resolve, and require every scratch file to live there.
+Run-level gate notes that the artifacts can check are computed from them, never
+recalled: at this point derive each from `$OUT/.feeds.json` and
+`$OUT/.markets.json`, and reconcile the note with them before writing it - a
+note that disagrees with the artifacts is wrong. The Step 6 coverage note also
+reconciles with `$OUT/.items.json`, which `md-to-items.mjs` writes in that
+step, so read it there and not here; at Step 4 that file is absent or stale. A
+quiet aspect is a claim about the world, not something a digest can settle, so
+that stays your own judgement.
 
 ### Step 4b - Resolve wire headlines to publisher URLs
 

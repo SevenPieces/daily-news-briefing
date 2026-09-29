@@ -164,8 +164,11 @@ primary).
 Use web_search for discovery, then read candidate articles with
 `scripts/fetch-page.mjs` (it varies the header profile and the transport, so a
 UA-sensitive gate does not read as a block, and it reports which date field it
-used); `web_fetch` remains a valid fallback. It never retries a 402: that is a
-licensing answer, not a transient failure. Cover
+used); `web_fetch` remains a valid fallback. Pass `--text` when the summary will
+be written from the page - that flag is what returns the page text, truncated,
+while the `textLength` the tool prints either way is the full stripped length.
+A record whose summary needs the body must be read with `--text`. It never
+retries a 402: that is a licensing answer, not a transient failure. Cover
 both sections across all seven aspects, respecting the budget, and capture every
 candidate in the research-report schema in `reference/research-input.md`. That
 schema is mandatory; the subagent fan-out is not. Each item must end with a

@@ -317,6 +317,8 @@ English; China content is Chinese. Structural labels are bilingual.
 - The coverage note repeats the header window **verbatim** (same dates and times
   in Asia/Shanghai as the label in parentheses), so the header and the note can
   never disagree about the window.
+- The coverage note states how many fetches the run made, so an overrun of the
+  20-30 target is visible; the target stays guidance, not a gate.
 - Quiet aspects are noted; nothing is padded to hit the item count.
 - The HTML is self-contained: header and content flow as one page with no
   separate sticky bar, plus collapsible aspects, dark theme, print styles,

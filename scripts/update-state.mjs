@@ -251,9 +251,25 @@ function main() {
         // stderr only: stdout prints the same JSON and this path writes nothing.
         const recordedAt = validDate(effective.until);
         const ageMs = now.getTime() - recordedAt.getTime();
-        const announced = ageMs >= 0
-          ? ' and is ' + round1(ageMs / HOUR) + 'h old'
-          : ' and lies ' + round1(-ageMs / 60000) + 'm ahead of this shell\'s clock';
+        // Under an hour the age is reported in minutes, because the hour
+        // reading is rounded to a tenth of an hour - six minutes wide - so a
+        // record written three minutes ago and one written eight minutes ago
+        // both read '0.1h old', anything under three minutes reads '0h old',
+        // and the reading cannot show how long ago a fresh record was written.
+        // Minutes are also what the ahead-of-clock branch below prints, so the
+        // two agree in unit.
+        // The branch turns on that rounded reading rather than on the raw span:
+        // a span of 59m57s rounds to sixty minutes, and comparing the raw span
+        // against HOUR would let the minutes branch print the '60m old' the
+        // hour branch exists to avoid. Choosing by the rounded value keeps the
+        // seam honest - the last minutes reading is 59.9m, and the first hour
+        // reading is the 1h that same rounding of the span produces.
+        const ageMinutes = round1(ageMs / 60000);
+        const announced = ageMs < 0
+          ? ' and lies ' + round1(-ageMs / 60000) + 'm ahead of this shell\'s clock'
+          : ageMinutes < 60
+            ? ' and is ' + ageMinutes + 'm old'
+            : ' and is ' + round1(ageMs / HOUR) + 'h old';
         process.stderr.write('update-state: reusing the planned window already recorded in ' + statePath
           + ' and not computing a new one: it ends ' + effective.until + announced
           + ', so it was announced by an earlier plan run. '

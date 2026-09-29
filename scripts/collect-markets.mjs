@@ -121,7 +121,10 @@ async function getJson(url, ms) {
 }
 
 async function fromYahoo(id, def, ms) {
-  const base = { id, label: def.label, group: def.group, region: def.region, symbol: def.symbol, source: 'yahoo' };
+  // Carry the map's `kind` onto the row. It is what decides the basis-point
+  // conversion below, so a consumer looking for yield rows can read the same
+  // signal instead of inferring one from a non-null changeBp. Absent elsewhere.
+  const base = { id, label: def.label, group: def.group, region: def.region, symbol: def.symbol, source: 'yahoo', kind: def.kind };
   const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(def.symbol) + '?range=1d&interval=1d';
   try {
     const json = await getJson(url, ms);
@@ -150,7 +153,8 @@ async function fromYahoo(id, def, ms) {
 }
 
 async function fromEastmoney(id, def, ms) {
-  const base = { id, label: def.label, group: def.group, region: def.region, symbol: def.secid, source: 'eastmoney' };
+  // Same tag as the Yahoo builder, so both bond rows are identifiable by kind.
+  const base = { id, label: def.label, group: def.group, region: def.region, symbol: def.secid, source: 'eastmoney', kind: def.kind };
   // push2delay is reliable; push2.eastmoney.com rejects Node and intermittently drops curl.
   const url = 'https://push2delay.eastmoney.com/api/qt/ulist.np/get?secids=' + encodeURIComponent(def.secid) + '&fields=f1,f2,f3,f4,f12,f14';
   try {

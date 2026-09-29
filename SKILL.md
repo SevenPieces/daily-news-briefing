@@ -279,8 +279,8 @@ English; China content is Chinese. Structural labels are bilingual.
   for any reason. A marker never means an HTTP request succeeded. #paywalled
   items carry the publisher's own feed abstract, never paraphrased locked text. Run
   `node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md"` after
-  writing the Markdown; it exits non-zero on any story missing a marker or
-  carrying more than one.
+  writing the Markdown; it exits non-zero on any story missing a marker,
+  carrying more than one, or carrying no `[src:...]` source reference.
 - Source diversity: neither section may rest on a single outlet. Run
   `node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"` after
   writing the Markdown; it exits non-zero when a section's primaries are all one

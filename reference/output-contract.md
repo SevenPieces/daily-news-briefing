@@ -156,11 +156,20 @@ see why a story sits where it does.
 ## Coverage note
 
 The coverage note has a **fixed part** and a **variable part**. The fixed part
-must contain:
+must contain the items below. Provenance counts are per story line, so they
+equal the number of stories in the briefing when no story line is repeated.
 
-- the header window sentence **verbatim** - the same dates, times and zone as the
-  parenthesised label in the metadata line;
-- item provenance counts - how many items came from each of full, feed and link;
+- the header window sentence **verbatim** - copied character for character from
+  the parenthesised window in the metadata line, with the same dates, times and
+  zone;
+- the item provenance counts - how many story lines came from each of full,
+  feed and link. Count story lines, not distinct stories: a line printed twice -
+  a Top story that is also shown in its aspect - is counted twice. Repeating a
+  story is the writer's choice, never a requirement, so never duplicate a story
+  to move the counts;
+- the fetch count - how many distinct URL fetches the run made (one per URL,
+  however many HTTP requests the retries cost), against the 20-30 target, which
+  stays guidance and not a gate;
 - the section-placement disclosure - any call made under the tie-break above;
 - the quiet aspects - every aspect with no significant news, named rather than
   silently omitted;

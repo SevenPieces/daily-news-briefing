@@ -125,6 +125,10 @@ function extractDate(html) {
     [/content=["']([^"']+)["'][^>]*property=["']article:published_time["']/, 'article:published_time'],
     [/itemprop=["']datePublished["'][^>]*content=["']([^"']+)["']/, 'itemprop:datePublished'],
     [/<meta[^>]+name=["'](?:pubdate|publish-date|date)["'][^>]*content=["']([^"']+)["']/i, 'meta:pubdate'],
+    // Xinhua (news.cn) and 央广网 ship the publication date under this exact
+    // name; it is date-only, so the research rules (a date-only field cannot
+    // supply publishedAt on its own) decide what the record keeps.
+    [/<meta[^>]+name=["']publishdate["'][^>]*content=["']([^"']+)["']/i, 'meta:publishdate'],
     [/<time[^>]+datetime=["']([^"']+)["']/, 'time[datetime]'],
     [/"dateModified"\s*:\s*"([^"]+)"/, 'dateModified'],
   ];

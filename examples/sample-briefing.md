@@ -43,6 +43,7 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 - Provenance by story line: 3 full, 3 feed, 3 link - 9 story lines in all.
 - Fetch count: 24 distinct URL fetches, against a 20-30 target that stays guidance, not a gate.
 - Quiet aspects: Global Politics (quiet - no significant news today) and China 社会 (无重大新闻).
+- Market snapshot: no row is stale beyond its exchange's last published session - the 10Y China govt bond row carries the run's own as-of time of 2026-09-10 17:30, while the S&P 500 row carries 04:03, the previous US session's close, because the US cash market was still shut when the run collected.
 - Searched: Global major-powers aspects and mainland China aspects. Not searched: sport, celebrity, markets beyond the snapshot.
 - Provenance note: no story line here is a blocked wire with an unresolved canonical URL, so the [find:] search-badge case does not arise; an [alt:] link only marks a corroborating second report.
 

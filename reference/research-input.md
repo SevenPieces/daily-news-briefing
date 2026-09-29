@@ -38,8 +38,8 @@ before writing; this file sits between them.
 | primaryUrl | yes | the canonical primary link |
 | publishedAt | yes | publication time in Asia/Shanghai, YYYY-MM-DD HH:MM; for a reused URL, the in-window update time |
 | dateSource | yes | the exact `dateSource` string the fetch printed, copied character for character; the tool's names are examples, not a closed set - `datePublished`, `article:published_time`, `itemprop:datePublished`, `meta:pubdate`, `time[datetime]`, `dateModified` - and a publisher-feed item records the feed's own field name (`pubDate`); a page read with `web_fetch` or another tool that prints no `dateSource` records that tool's name (`web_fetch`). When the value is neither `datePublished` nor `dateModified`, the reused-URL check below cannot lean on the label alone: look at the page itself before admitting or rejecting the item |
-| provenance | yes | full, feed or link - where the summary's words came from: the article body, the publisher feed's own description, or the headline and link alone; a fetched page with no article body is link, never full |
-| textLength | yes | the provenance call's evidence, exactly as fetched, never rounded: `scripts/fetch-page.mjs` returned `ok:true` - the `textLength` it printed; returned `ok:false` (too small, non-HTML, blocked) - 0, with its `error` in `gateNote`; the page was read with `web_fetch` or another tool - the character length of the text obtained; a publisher RSS record with no page fetch - the character length of the description you collected; a headline-and-link wire item, neither fetched nor described by a feed - 0 |
+| provenance | yes | full, feed or link - where the summary's words came from: the article body, the publisher feed's own description, or the headline and link alone; a fetched page with no article body is link unless the summary is taken from the publisher's own feed description, which is feed; it is never full |
+| textLength | yes | the evidence for the provenance call it is attached to, exactly as counted, never rounded - the length of the text the call rests on, not of the fetch: `scripts/fetch-page.mjs` returned `ok:true` and the summary came from the page body - the `textLength` it printed, the full stripped length whether or not `--text` truncated the excerpt; returned `ok:false` (too small, non-HTML, blocked) - 0, with its `error` in `gateNote`; returned `ok:true` but the excerpt is chrome only with no publisher feed describing the story, so the item is recorded a link - 0, because the call rests on the headline and link rather than on the chrome, with the printed `textLength` reported in `gateNote` as the body-less fetch evidence; the page was read with `web_fetch` or another tool - the character length of the text obtained; a publisher RSS record, with the summary from the feed's own description - the character length of that description, never the printed `textLength` of a fetch that returned no body the summary used; a headline-and-link wire item, neither fetched nor described by a feed - 0. A printed `textLength` that measures no body the summary came from does not become this field's value: report it in `gateNote` as the body-less fetch evidence |
 | flags | yes | new, followup, developing, paywalled, unverified; classification against the state index is the agent's call (see `reference/output-contract.md`) |
 | corroboratingOutlet | when one exists | a second credible outlet reporting the same event; it becomes the `[alt:]` link |
 | altUrl | when one exists | that outlet's canonical URL |
@@ -71,10 +71,13 @@ coverage note can say so honestly:
   rather than padded.
 - **Non-200 codes** - every fetch that ended in a status other than 200, with the
   URL, so a licence gate (402) is not mistaken for a flaky CDN.
-- **Body-less fetches** - a fetch that returned HTTP 200 with no article body
-  (a few hundred characters of chrome, a consent wall, a non-HTML answer), with the
-  URL and whichever evidence exists: `fetch-page.mjs`'s `textLength` when it
-  returned `ok:true`, otherwise its `error`; the item is link, never full.
+- **Body-less fetches** - a fetch that returned HTTP 200 with no article body: a
+  chrome-only excerpt (the 1500-character window can be nothing but chrome even
+  when the printed `textLength` runs to thousands of characters), a consent
+  wall, a non-HTML answer - each with the URL and whichever evidence exists:
+  `fetch-page.mjs`'s `textLength` when it returned `ok:true`, otherwise its
+  `error`; the item is feed when the summary is taken from the publisher's own
+  feed description, link otherwise - never full.
 - **dateRejected** - items dropped because their date field fell outside the
   window, or because the only date available was a modification time.
 - **Page-versus-RSS conflicts** - a page and its publisher feed disagreeing on the

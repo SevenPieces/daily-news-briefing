@@ -103,6 +103,11 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 | `fetch-page.mjs` | Reads an article page with retry and browser/plain profile variation; reports `dateSource` |
 | `render-html.mjs` | Markdown to self-contained HTML |
 
+The two gates count different things: `check-diversity.mjs` counts only the
+`Global` and `China` section lines, while `check-provenance.mjs` counts every
+story line - Top stories, both sections and the Watchlist - so the two item
+counts differ for the same briefing.
+
 ## Sourcing rules
 
 - Two source tiers: fetch-verified primaries (BBC, SCMP, The Guardian, Al

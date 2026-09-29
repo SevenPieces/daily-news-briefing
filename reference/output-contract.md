@@ -163,14 +163,21 @@ The coverage note has a **fixed part** and a **variable part**. The fixed part
 must contain the items below. Provenance counts are per story line, so they
 equal the number of stories in the briefing when no story line is repeated.
 
-- the header window sentence **verbatim** - copied character for character from
-  the parenthesised window in the metadata line, with the same dates, times and
-  zone;
+- the header window **verbatim** - the parenthesised window in the metadata line
+  is copied character for character, with the same dates, times and zone. That
+  window is a string, not a sentence: the note may state it inside a sentence of
+  its own if the string itself is unchanged;
 - the item provenance counts - how many story lines came from each of full,
-  feed and link. Count story lines, not distinct stories: a line printed twice -
-  a Top story that is also shown in its aspect - is counted twice. Repeating a
-  story is the writer's choice, never a requirement, so never duplicate a story
-  to move the counts;
+  feed and link. Count them from the Markdown you just wrote and confirm them
+  against `scripts/check-provenance.mjs`'s output before `update`: `.items.json`
+  carries no provenance split, and the gate can only read a note that is already
+  in the file. If the two disagree, correct the note and re-run `md-to-items`
+  and both gates - safe only while `update` has not run. Count story lines, not
+  distinct stories: a line printed twice -
+  a Top story that is also shown in its aspect - is counted twice, and a
+  Watchlist entry is a story line for these counts even though it is an
+  unresolved developing story. Repeating a story is the writer's choice, never a
+  requirement, so never duplicate a story to move the counts;
 - the fetch count - how many distinct URL fetches the run made (one per URL,
   however many HTTP requests the retries cost), against the 20-30 target, which
   stays guidance and not a gate;
@@ -179,6 +186,20 @@ equal the number of stories in the briefing when no story line is repeated.
   silently omitted;
 - the stale-data explanation - any market row whose as-of time is older than the
   run, and why.
+
+The two gates count different things: `scripts/check-diversity.mjs` counts only
+the `## Global` and `## China` story lines, so its per-section figures leave out
+the Top stories and the Watchlist, while `scripts/check-provenance.mjs` counts
+every story line - Top stories, both sections and the Watchlist - plus
+story-shaped bullets in the preamble and in sections it does not recognise, so
+in practice its figure is the larger of the two. Not always: provenance counts
+a line only when it starts with `- `, while diversity also matches an indented
+bullet, so an indented story line can make diversity exceed provenance. A Top
+story repeated in its aspect is counted twice by `check-provenance.mjs`, while
+`check-diversity.mjs` sees only the aspect copy, because it counts just the
+`## Global` and `## China` lines. The provenance counts
+above are story lines - the figure the coverage note follows - and so agree
+with `check-provenance.mjs`.
 
 The variable part is free: add anything else the run judges worth noting (a
 capped window, a licence gate that blocked a wire, two reports in conflict). Keep

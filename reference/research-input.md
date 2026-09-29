@@ -21,6 +21,7 @@ before writing; this file sits between them.
       "publishedAt": "2026-09-28 09:30",
       "dateSource": "datePublished",
       "provenance": "full",
+      "textLength": 11847,
       "flags": ["new"],
       "corroboratingOutlet": "SCMP",
       "altUrl": "https://...",
@@ -37,12 +38,13 @@ before writing; this file sits between them.
 | primaryUrl | yes | the canonical primary link |
 | publishedAt | yes | publication time in Asia/Shanghai, YYYY-MM-DD HH:MM; for a reused URL, the in-window update time |
 | dateSource | yes | which date field that time came from: datePublished, pubDate, dateModified, or the page's own timestamp; record the field actually used |
-| provenance | yes | full, feed or link - the depth actually reached |
+| provenance | yes | full, feed or link - where the summary's words came from: the article body, the publisher feed's own description, or the headline and link alone; a fetched page with no article body is link, never full |
+| textLength | yes | the provenance call's evidence, exactly as fetched, never rounded: `scripts/fetch-page.mjs` returned `ok:true` - the `textLength` it printed; returned `ok:false` (too small, non-HTML, blocked) - 0, with its `error` in `gateNote`; the page was read with `web_fetch` or another tool - the character length of the text obtained; a publisher RSS record with no page fetch - the character length of the description you collected; a headline-and-link wire item, neither fetched nor described by a feed - 0 |
 | flags | yes | new, followup, developing, paywalled, unverified; classification against the state index is the agent's call (see `reference/output-contract.md`) |
 | corroboratingOutlet | when one exists | a second credible outlet reporting the same event; it becomes the `[alt:]` link |
 | altUrl | when one exists | that outlet's canonical URL |
 | keyFacts | yes | the facts the summary will be written from, 1-2 sentences in the section language; for a paywalled or feed item, quote only the publisher's own title and description |
-| gateNote | when the gate fired | what happened to this item: a non-200 fetch, a rejected date, a page-versus-RSS conflict |
+| gateNote | when the gate fired | what happened to this item: a non-200 fetch, a body-less 200, a rejected date, a page-versus-RSS conflict |
 
 ### Reused URLs - datePublished outside the window
 
@@ -69,6 +71,10 @@ coverage note can say so honestly:
   rather than padded.
 - **Non-200 codes** - every fetch that ended in a status other than 200, with the
   URL, so a licence gate (402) is not mistaken for a flaky CDN.
+- **Body-less fetches** - a fetch that returned HTTP 200 with no article body
+  (a few hundred characters of chrome, a consent wall, a non-HTML answer), with the
+  URL and whichever evidence exists: `fetch-page.mjs`'s `textLength` when it
+  returned `ok:true`, otherwise its `error`; the item is link, never full.
 - **dateRejected** - items dropped because their date field fell outside the
   window, or because the only date available was a modification time.
 - **Page-versus-RSS conflicts** - a page and its publisher feed disagreeing on the

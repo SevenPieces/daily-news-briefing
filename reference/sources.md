@@ -111,8 +111,9 @@ when any failed, and 2 on a usage error or an unreadable file.
   publication time - see "Reused URLs" below for when a modified page is still
   in-window.
 - `web_fetch` remains a valid fallback when the script cannot reach a page.
-- A page you actually retrieved is `[prov:full]`; a publisher RSS abstract is
-  `[prov:feed]`. Neither is second-class - the marker states depth only.
+- `[prov:full]` means the cited page's own article body was obtained; a publisher
+  RSS abstract is `[prov:feed]`. Neither is second-class - the marker states depth
+  only, never that an HTTP request succeeded.
 
 ### Reused URLs - `datePublished` outside, `dateModified` and `pubDate` inside
 

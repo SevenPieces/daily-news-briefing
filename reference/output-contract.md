@@ -95,9 +95,14 @@ Every story is exactly one Markdown list item:
 
 | Marker | Meaning | Summary written from |
 |---|---|---|
-| `[prov:full]` | the article page was fetched | the article |
-| `[prov:feed]` | the publisher's own RSS (page may be bot-blocked) | the feed's own description |
-| `[prov:link]` | headline + link only (blocked wire, not fetched) | the corroborating primary |
+| `[prov:full]` | the cited page's own article body was obtained | the page's own article body |
+| `[prov:feed]` | the publisher's own RSS description (the page may be blocked) | the feed's own description |
+| `[prov:link]` | no article body was obtained from the cited URL, for any reason | a corroborating primary when one exists, otherwise the headline alone; #unverified follows hard rule 9, not this marker |
+
+Reasons for `[prov:link]`: a blocked wire, a 402 licensing gate, or an HTTP 200
+that returned only masthead and navigation. The marker names where the summary's
+words came from; it never means an HTTP request succeeded. Keep exactly three
+markers - never invent a fourth.
 
 The renderer makes every **headline a link** to its primary source and adds a
 "原文 / Original ↗" link to any item tagged #paywalled or #unverified. Never

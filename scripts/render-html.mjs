@@ -101,7 +101,7 @@ function parseStory(line) {
 }
 
 const PROV = {
-  full: ['p-full', 'Verified: full article fetched'],
+  full: ['p-full', 'Verified: article body obtained from the cited page'],
   feed: ['p-feed', 'Publisher feed: summary from the outlet own RSS'],
   link: ['p-link', 'Link only: open the original to read'],
 };

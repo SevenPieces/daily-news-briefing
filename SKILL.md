@@ -74,9 +74,13 @@ Hard rules:
 8. **Publisher feeds are primaries.** An item from an outlet's own RSS feed (its
    domain, with a per-item pubDate) is a dated primary: cite link + time, write
    the summary from the feed's own description, and never paraphrase locked body
-   text. Tag subscription outlets #paywalled. Mark provenance with `[prov:full]`
-   (article fetched), `[prov:feed]` (publisher RSS) or `[prov:link]`
-   (headline + link only).
+   text. Tag subscription outlets #paywalled. Mark provenance by depth - where the
+   summary's words came from: `[prov:full]` when the cited page's own article body
+   was obtained; `[prov:feed]` when the summary is the publisher's own RSS
+   description (the page may be blocked); `[prov:link]` when no article body was
+   obtained from the cited URL for any reason - a blocked wire, a 402 licensing
+   gate, or an HTTP 200 that returned only masthead and navigation. The marker
+   never means an HTTP request succeeded.
 9. **Blocked wire copy is an alt, not a primary.** AP, Reuters, FT and WSJ cannot
    be fetched and have no working RSS: include them as a corroborated
    `[alt:AP](url)` link, tagged #unverified only when no fetchable primary
@@ -120,9 +124,10 @@ the state already holds a **usable** `plannedWindow` - `until` parses, is not
 behind `lastBriefingAt`, is at most 12h old and no more than 5 minutes ahead -
 `plan` reuses it, so it computes nothing, writes nothing and prints the recorded
 window instead. Otherwise it computes a fresh window and records it in the state
-as `plannedWindow`, and `update` - in this same shell - consumes that record and
-closes coverage at the same end time instead of reading its own clock. The shared
-predicate is `usablePlannedWindow(state, baseline, now)` in
+as `plannedWindow`. The window travels through the state file, not the shell:
+`update` reads that record back from the same `--state` file and closes coverage
+at the same end instead of reading its own clock, whichever shell runs it. The
+shared predicate is `usablePlannedWindow(state, baseline, now)` in
 `scripts/update-state.mjs`, so the announced end and the stored baseline agree
 whenever `update` consumes a usable record.
 
@@ -149,8 +154,11 @@ licensing answer, not a transient failure. Cover
 both sections across all seven aspects, respecting the budget, and capture every
 candidate in the research-report schema in `reference/research-input.md`. That
 schema is mandatory; the subagent fan-out is not. Each item must end with a
-fetched, date-stamped primary: a fetched article, a publisher's own RSS item, or
-- for blocked wire copy - a corroborating primary with the wire as an alt. If you
+dated primary: a page whose own article body was obtained, a publisher's
+own RSS item, or - for blocked wire copy - a corroborating primary with the
+wire as an alt. A page that answered 200 but yielded no article body is
+`[prov:link]`, not `[prov:full]`; its summary comes from a corroborating
+primary or the headline alone - see `reference/output-contract.md`. If you
 do fan out, remember that a subagent is a fresh agent with no memory of this
 skill: give it the resolved absolute path (for example
 `/.../briefings/.staging/2026-09-29`) rather than the variable name `$STAGE`,
@@ -202,12 +210,13 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 ~~~
 
 `md-to-items.mjs` parses the Markdown you just wrote into the item index `update`
-stores, so it runs first, and `update` must be run in that same shell so it
-consumes the window `plan` announced there. If `md-to-items` fails, do not run
-`update`. The `&&` chain still guards the run, though not because a stale file
-would survive: `md-to-items` removes the `.items.json` before it parses, so a
-failed parse leaves no file behind and `update` then fails loudly with exit 2 on
-the missing index instead of ingesting one.
+stores, so it runs first, and `update` must run against the same `--state` file
+`plan` wrote, while the recorded window is still usable, so it closes coverage
+at the end `plan` announced. Which shell runs it is irrelevant. If `md-to-items`
+fails, do not run `update`. The `&&` chain still guards the run, though not
+because a stale file would survive: `md-to-items` removes the `.items.json`
+before it parses, so a failed parse leaves no file behind and `update` then
+fails loudly with exit 2 on the missing index instead of ingesting one.
 
 `update` also refuses an `--items` file older than the window it would close -
 `md-to-items` runs after `plan`, so the index it writes is never that old - so a
@@ -261,10 +270,12 @@ English; China content is Chinese. Structural labels are bilingual.
 - `#new` and `#followup` are your own classification, made against the item
   titles the state holds for the last seven days; the state derives nothing, so
   the tags are only as good as that comparison.
-- Every story carries exactly one provenance marker: `[prov:full]` only for
-  pages actually fetched, `[prov:feed]` for publisher RSS, `[prov:link]` for
-  headline+link only. #paywalled items carry the publisher's own feed abstract,
-  never paraphrased locked text. Run
+- Every story carries exactly one provenance marker, named for where the
+  summary's words came from: `[prov:full]` when the cited page's own article body
+  was obtained, `[prov:feed]` when the summary is the publisher's own RSS
+  description, `[prov:link]` when no article body was obtained from the cited URL
+  for any reason. A marker never means an HTTP request succeeded. #paywalled
+  items carry the publisher's own feed abstract, never paraphrased locked text. Run
   `node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md"` after
   writing the Markdown; it exits non-zero on any story missing a marker or
   carrying more than one.

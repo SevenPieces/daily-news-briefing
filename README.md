@@ -116,8 +116,9 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
   `#unverified` only when no fetchable primary corroborates the story.
 - Paywalled items show headline plus link only - locked body text is never
   paraphrased.
-- Every story carries a provenance marker: `[prov:full]` (article fetched),
-  `[prov:feed]` (publisher RSS), `[prov:link]` (headline and link only).
+- Every story carries a provenance marker: `[prov:full]` (article body
+  obtained), `[prov:feed]` (publisher RSS), `[prov:link]` (no article body
+  obtained from the cited URL, for any reason).
 - Market numbers come only from the collector APIs, each with its as-of time. A
   missing instrument is marked unavailable, never estimated from prose.
 - Neither section may rest on a single outlet; a section written from one feed is

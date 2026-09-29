@@ -98,10 +98,15 @@ only appears in a briefing when that new development exists.
   otherwise from its own clock, and then:
   - `window = planWindow(state.lastBriefingAt, coverageEnd)`
   - `lastBriefingAt = coverageEnd` exactly, so the stored baseline is the
-    announced end **whenever update consumes a usable record**. When no usable
-    record exists - update is not running in the shell that ran `plan`, or the
-    record was stale - `coverageEnd` is update's own `now` and the announced end
-    is whatever `plan` last printed, so the two need not match;
+    announced end **whenever update consumes a usable record**. The window
+    travels through the state file: `plan` records it as `plannedWindow` and
+    `update` reads that record back from the same `--state` file, so which shell
+    runs `update` does not matter. When no usable record exists - `update` ran
+    against a different state file, `plan` had no state file to record the
+    window in (a missing or unreadable one: it still prints, and does not
+    create the file), or the usability predicate above rejects the record -
+    `coverageEnd` is update's own `now` and the announced end is whatever `plan`
+    last printed, so the two need not match;
   - `plannedWindow = null`.
 - **Guard**: when the window measured in whole seconds from its own ends is below
   `MIN_WINDOW_SECONDS` (120, two minutes) and `--force` was not passed, `update`

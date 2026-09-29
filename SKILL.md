@@ -23,7 +23,7 @@ trace to a real source. Nothing is invented, estimated, or padded.
 | Global scope | Major powers: US, EU/UK, Russia and Eastern Europe, China-world relations, Japan and the Koreas, Middle East, international institutions |
 | China scope | Mainland national, plus Hong Kong, Taiwan and Macau, and city-level stories when they are genuinely worth noting |
 | Volume | 20-25 distinct stories total; a Top story repeated in its section is one story but two story lines; allocated by importance; empty aspects are omitted |
-| Budget | 20-30 fetches, about 3-5 minutes |
+| Budget | 20-30 article-page fetches for the run, about 3-5 minutes |
 
 ## 2. Coverage window (never ask)
 
@@ -196,7 +196,15 @@ from the feed's description or the headline alone. It never
 retries a 402: that is a licensing answer, not a transient failure. Cover
 both sections across all seven aspects, respecting the budget, and capture every
 candidate in the research-report schema in `reference/research-input.md`. That
-schema is mandatory; the subagent fan-out is not. Each item must end with a
+schema is mandatory; the subagent fan-out is not. The 20-30 fetch target is a
+run-level budget for article-page fetches, not a per-agent one: the ledger is
+the union of every agent's fetches plus the orchestrator's own. Overlap between
+agents is only discovered after the fact, so budget the SUM of the allowances
+you hand out - that sum, not the hoped-for union, is what a budget can promise.
+A failed probe counts: it was a fetch the run made. A search-derived China
+section commonly reaches the top of that band or passes it, and the overrun is
+disclosed in the coverage note, never hidden or re-counted. Each item must end
+with a
 dated primary: a page whose own article body was obtained, a publisher's
 own RSS item, or - for blocked wire copy - a corroborating primary with the
 wire as an alt. A page that answered 200 but yielded no article body is
@@ -355,8 +363,8 @@ English; China content is Chinese. Structural labels are bilingual.
 - The coverage note repeats the header window **verbatim** (same dates and times
   in Asia/Shanghai as the label in parentheses), so the header and the note can
   never disagree about the window.
-- The coverage note states how many fetches the run made, so an overrun of the
-  20-30 target is visible; the target stays guidance, not a gate.
+- The coverage note states how many article-page fetches the run made, so an
+  overrun of the 20-30 target is visible; the target stays guidance, not a gate.
 - Quiet aspects are noted; nothing is padded to hit the item count.
 - The HTML is self-contained: header and content flow as one page with no
   separate sticky bar, plus collapsible aspects, dark theme, print styles,

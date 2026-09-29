@@ -104,9 +104,10 @@ level also carries `rounds` and `profiles`. It exits 0 only when every URL was
 fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
 
 - **Pass `--text` to read an article's body.** It is the flag that returns the
-  page text, truncated, while the `textLength` the tool prints either way is
-  the full stripped length; a record whose summary needs the body must be read
-  with `--text`.
+  page text, truncated at 1500 characters, while the `textLength` the tool
+  prints either way is the full stripped length of the page, not the length of
+  the excerpt; a record whose summary needs the body must be read with
+  `--text`.
 - **Vary the profile before concluding "blocked".** One failed attempt is
   evidence of nothing - but a 402 from a licensing gate is an answer, not a
   challenge.
@@ -135,6 +136,12 @@ fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
   the page to a stronger marker on the strength of its 200 alone. A publisher
   feed that describes the story in its own words still earns `[prov:feed]` -
   the marker names where the words came from.
+- **A chrome-only excerpt is no body.** The 1500-character window can hold
+  nothing but a cookie banner, masthead and navigation, so a large
+  `textLength` is not evidence of an article. A page whose excerpt is chrome
+  has yielded no article body: take the summary from the publisher's own RSS
+  description or from the headline alone, and record the item `[prov:feed]`
+  or `[prov:link]` - never `[prov:full]` - whatever length the tool printed.
 
 ### Reused URLs - `datePublished` outside, `dateModified` and `pubDate` inside
 

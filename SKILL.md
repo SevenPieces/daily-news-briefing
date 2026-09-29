@@ -164,10 +164,14 @@ primary).
 Use web_search for discovery, then read candidate articles with
 `scripts/fetch-page.mjs` (it varies the header profile and the transport, so a
 UA-sensitive gate does not read as a block, and it reports which date field it
-used); `web_fetch` remains a valid fallback. Pass `--text` when the summary will
-be written from the page - that flag is what returns the page text, truncated,
-while the `textLength` the tool prints either way is the full stripped length.
-A record whose summary needs the body must be read with `--text`. It never
+used); `web_fetch` remains a valid fallback. `--text` is the flag that returns
+the page text, and it hard-truncates that text at 1500 characters - the
+`textLength` the tool prints either way is the full stripped length. A record
+whose summary needs the body must be read with `--text`, but a truncated
+excerpt is not evidence of a body: when all 1500 characters are pure site
+chrome - masthead, navigation, cookie notice - no body was obtained, so record
+`[prov:feed]` or `[prov:link]`, never `[prov:full]`, and write the summary
+from the feed's description or the headline alone. It never
 retries a 402: that is a licensing answer, not a transient failure. Cover
 both sections across all seven aspects, respecting the budget, and capture every
 candidate in the research-report schema in `reference/research-input.md`. That
@@ -175,8 +179,10 @@ schema is mandatory; the subagent fan-out is not. Each item must end with a
 dated primary: a page whose own article body was obtained, a publisher's
 own RSS item, or - for blocked wire copy - a corroborating primary with the
 wire as an alt. A page that answered 200 but yielded no article body is
-`[prov:link]`, not `[prov:full]`; its summary comes from a corroborating
-primary or the headline alone - see `reference/output-contract.md`. If you
+`[prov:link]`, not `[prov:full]` - unless the summary is taken from the
+publisher's own feed description, which is `[prov:feed]`; otherwise the
+summary comes from a corroborating primary or the headline alone - see
+`reference/output-contract.md`. If you
 do fan out, remember that a subagent is a fresh agent with no memory of this
 skill: give it the resolved absolute path (for example
 `/.../briefings/.staging/2026-09-29`) rather than the variable name `$STAGE`,

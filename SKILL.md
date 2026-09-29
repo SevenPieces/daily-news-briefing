@@ -86,10 +86,12 @@ Hard rules:
 
 ## 4. Workflow
 
-### Step 0 - Read the reference documents
+### Step 0 - Read the reference documents (in step order)
 
 Four reads come before any work, each before the step it governs:
 
+- `reference/state-schema.md` - the state fields and the planned-window
+  record; read before touching state (Step 2).
 - `reference/sources.md` - the source tiers and the feed registry, with the
   probe evidence behind them in `reference/feasibility.md`; read before
   collecting (Step 3).
@@ -97,8 +99,6 @@ Four reads come before any work, each before the step it governs:
   before researching (Step 4).
 - `reference/output-contract.md` - the briefing grammar, tag placement and
   coverage-note requirements; read before writing (Step 6).
-- `reference/state-schema.md` - the state fields and the planned-window
-  record; read before touching state (Step 2).
 
 ### Step 1 - Resolve paths
 

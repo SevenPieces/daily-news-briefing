@@ -154,10 +154,15 @@ node "$SKILL/scripts/fetch-feeds.mjs" --since <SINCE> --out "$OUT/.feeds.json"
 ~~~
 
 Markets come from Yahoo Finance (keyless), with Eastmoney as the
-cross-check for the China 10-year bond row. The feed collector returns publisher feeds (dated, with a
-description - usable as primaries) and Google News items (discovery only: their
-links do not resolve to publishers, so confirm those through a fetch-verified
-primary).
+cross-check for the China 10-year bond row. The feed collector returns publisher
+feeds (dated, with a description - usable as primaries) and Google News items
+(discovery only: their links do not resolve to publishers, so confirm those
+through a fetch-verified primary). It emits one record per item - `title`,
+`link`, `outlet`, `section`, `aspect`, `publishedAt`, `summary`,
+`discoveryOnly` - and its `aspect` is the collector's own coarse slug
+(`foreign`, `economy`, `politics`, `tech`, `business`, `social`,
+`military`), not one of the contract's seven aspects: never copy it into a
+story line. See `reference/sources.md` for the full shape.
 
 ### Step 4 - Research both sections
 

@@ -217,6 +217,33 @@ on. SCMP and Nikkei RSS are unusable as dated feeds (above) - reach Nikkei
 and SCMP with web_fetch. Add one-off feeds per run with
 `--feeds url1,url2`.
 
+### What the feed collector emits
+
+`scripts/fetch-feeds.mjs` emits discovery rows, one per feed item, in this
+shape:
+
+| Field | Meaning |
+|---|---|
+| title | the feed's own item title |
+| link | the item URL |
+| outlet | the feed's outlet, else the item's own `source`, else the feed's own `title` |
+| section | global or china, from the feed's configuration; empty for a one-off `--feeds` URL |
+| aspect | the collector's own coarse section slug - not a contract aspect (below); empty for a one-off `--feeds` URL |
+| publishedAt | the feed's `pubDate`, `published`, `updated` or `dc:date`, or null |
+| summary | a feed row's description, HTML stripped and capped at 400 characters, or null - the publisher's own words on a publisher feed, the aggregator's own snippet on a Google News row |
+| discoveryOnly | true when the link is a Google or Bing redirect that never resolves to the publisher, so the row needs a primary fetch |
+
+`discoveryOnly` is keyed off the link, so a redirect row is never cited as a
+primary even when its outlet looks like a publisher.
+
+The collector's `aspect` values are its own coarse section slugs, set per feed
+or per discovery query - `foreign`, `economy`, `politics`, `tech`,
+`business`, `social` and `military` - and they are **not** the contract's
+seven aspect headings. They are lowercase slugs that bucket a whole feed: every
+BBC world item is `foreign`, whether the story is Foreign affairs, Military or
+Social. Treat `aspect` as a discovery hint only - re-derive the aspect from the
+story, and never copy the slug into a story record or into the briefing.
+
 ### China has no feed backbone
 
 The China section's one configured direct feed - **Global Times, politics** - is

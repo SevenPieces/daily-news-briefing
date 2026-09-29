@@ -72,6 +72,12 @@ Every story is exactly one Markdown list item:
   `#tags` after the marker are also accepted. It renders as a coloured dot, not
   as text. `scripts/check-provenance.mjs` enforces this and exits non-zero when a
   story has no marker, more than one, or a marker that is not the last token.
+  The gate also requires a source reference - a `[src:...]` link - on every
+  story line. Passing it is necessary, not sufficient, for the state index: a
+  line reaches the index only when it also sits under a recognised section
+  heading and yields a title, so a bullet under an unrecognised heading, or one
+  that carries a source reference but no title, passes the gate and is not
+  indexed.
 
 ## Classification, headlines and the watchlist
 

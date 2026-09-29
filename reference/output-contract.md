@@ -7,13 +7,17 @@
 | briefing-YYYY-MM-DD.md | editable source, written by the agent |
 | briefing-YYYY-MM-DD.html | the deliverable, produced by render-html.mjs |
 | briefing-state.json | memory, written by update-state.mjs (plan records the window; update writes the state) |
+| .markets.json | run artifact: the market collector's rows, kept in the output directory |
+| .feeds.json | run artifact: the feed collector's output, kept in the output directory |
+| .items.json | run artifact: the parsed item index, written by md-to-items.mjs, kept in the output directory |
 
-Deliver only the HTML. Keep the Markdown and state on disk.
+Deliver only the HTML. Keep the Markdown, the state and the run artifacts
+(`.markets.json`, `.feeds.json`, `.items.json`) on disk.
 
 ## Markdown structure
 
     # Daily Briefing / 每日简报 - 2026-09-10
-    _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00) - 48h not covered_
+    _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00 Asia/Shanghai) - 48h not covered_
 
     ## Top stories / 今日要闻
     - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) #new [prov:feed]

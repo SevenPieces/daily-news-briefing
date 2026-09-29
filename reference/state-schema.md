@@ -49,13 +49,24 @@ in its aspect section is indexed twice: no story key and no derived state.
 - both are ignored if the input carries them.
 
 The append is **idempotent for a re-run**. An entry already held under the same
-`date` and `title` is this run's own earlier write, not a new story, so it is kept
-once and not appended again. Those are the only two fields matched, and only
-entries already in the state are compared - the incoming batch is never compared
-with itself, so a line the Markdown repeats inside one run is still indexed as
-many times as it is written. Re-running Step 6 therefore cannot duplicate the
-index; it can still move the coverage baseline, which is why the re-run guard
-below refuses it.
+`date` and `title` is already covered, not a new story, so it is kept once and
+not appended again. Those are the only two fields matched, and only entries
+already in the state are compared - the incoming batch is never compared with
+itself, so a line the Markdown repeats inside one run is still indexed as many
+times as it is written. Re-running Step 6 therefore cannot duplicate the index;
+it can still move the coverage baseline, which is why the re-run guard below
+refuses it.
+
+Two briefings on the same calendar day share the `(date, title)` key, so a title
+the second briefing reports can already be held when it runs with nothing having
+gone wrong: the dedup is not by itself evidence of a re-run. The common case is
+a **watchlist title that recurs** - retention is not a report, and a later
+briefing lists the title again when it moves inside the window - so the same
+entry is matched on both runs. What separates a second briefing from a repeated
+Step 6 is the window the re-run guard measures, not the dedup - and only inside
+the guard's band: a second Step 6 pass more than ten minutes after the first
+closes a fresh window, exits 0 and moves the baseline, the neutral dedup notice
+the only trace.
 
 - `title`, `primaryUrl` - the cited headline and its primary link.
 - `section`, `aspect`, `outlet` - recorded as given, and read back as the index

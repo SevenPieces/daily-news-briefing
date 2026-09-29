@@ -383,11 +383,12 @@ function main() {
 
   const lastBriefingDate = arg('--date', dateKey(coverageEnd));
   const items = retained(state.items, now);
-  // A re-run of Step 6 appends the same curated lines a second time: the first
-  // pass consumed the planned window, so this pass rebuilds the index from the
-  // same Markdown and every story would land twice. An entry already held under
-  // the same date and title is this run's own earlier write, not a new story, so
-  // it is kept once. The key is the two stored fields the index is read by, and
+  // Step 6 can write the same curated line twice: a re-run of the step rebuilds
+  // the index from the same Markdown, and two briefings on one calendar day that
+  // both carry a recurring title - a retained watchlist entry, say - collide on
+  // the (date, title) key by design. Either way an entry already held for this
+  // date with this title is already covered, so it is kept once rather than
+  // appended again. That key is the two stored fields the index is read by, and
   // only entries already in the state are matched - the incoming batch is never
   // compared with itself, so a line the Markdown repeats inside one run is still
   // appended as many times as it is written.
@@ -415,8 +416,8 @@ function main() {
   }
   if (alreadyHeld) {
     process.stderr.write('update-state: ' + alreadyHeld + ' of ' + incoming.length + ' curated entries are already in the '
-      + 'index for ' + lastBriefingDate + ' with the same title, so they were kept once rather than appended again; this is a '
-      + 're-run of a completed Step 6, and the coverage baseline moved to ' + coverageEnd.toISOString() + ' all the same.\n');
+      + 'index for ' + lastBriefingDate + ' with the same title, so they were kept once rather than appended again; the coverage '
+      + 'baseline moved to ' + coverageEnd.toISOString() + ' all the same.\n');
   }
   const watchlist = buildWatchlist(items);
 

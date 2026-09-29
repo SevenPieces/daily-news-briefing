@@ -127,8 +127,9 @@ one-line label. Use those values verbatim in the header and coverage note: when
 the state already holds a **usable** `plannedWindow` - `until` parses, is not
 behind `lastBriefingAt`, is at most 12h old and no more than 5 minutes ahead -
 `plan` reuses it, so it computes nothing, writes nothing and prints the recorded
-window instead. Otherwise it computes a fresh window and records it in the state
-as `plannedWindow`. The window travels through the state file, not the shell:
+window instead, announcing the reuse on stderr with the record's age and end.
+Otherwise it computes a fresh window and records it in the state as
+`plannedWindow`. The window travels through the state file, not the shell:
 `update` reads that record back from the same `--state` file and closes coverage
 at the same end instead of reading its own clock, whichever shell runs it. The
 shared predicate is `usablePlannedWindow(state, baseline, now)` in

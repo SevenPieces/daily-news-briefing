@@ -86,8 +86,10 @@ only appears in a briefing when that new development exists.
   **usable** `plannedWindow` (below) it prints that recorded window, computes
   nothing and writes nothing; otherwise it computes a fresh window and records
   it in FILE as `plannedWindow` (read-modify-write; every other value is
-  preserved). If FILE does not exist or cannot be read, `plan` still prints and
-  does **not** create the file.
+  preserved). A reused window is announced: `plan` writes one line to stderr
+  naming the record's age and its end, so a record an aborted run left behind is
+  visible; stdout and the state are unchanged either way. If FILE does not exist
+  or cannot be read, `plan` still prints and does **not** create the file.
 - A plannedWindow is **usable** when its `until` parses as a date, is not behind
   `state.lastBriefingAt`, is no more than 12h old (it is not a leftover from an
   aborted run), and is not more than 5 minutes ahead of the command's own clock

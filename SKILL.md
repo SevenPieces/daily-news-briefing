@@ -112,7 +112,9 @@ delete at a directory the run never used, leaving the real scratch behind. The
 date is fixed for the whole run.
 
 All research scratch - subagent output, feed dumps, fetched pages - lives under
-`$STAGE`, and the run deletes that directory before it finishes (Step 7).
+`$STAGE`, and the run deletes that directory before it finishes (Step 7). The
+run's own artifacts - `.markets.json`, `.feeds.json`, `.items.json` - stay in
+`$OUT`; staging holds nothing the run keeps.
 
 ### Step 2 - Compute the window
 
@@ -229,14 +231,22 @@ write when that window is under two minutes (120s) - a second update moments
 after the last one - unless you pass `--force`, which is only right once you have
 checked the run is genuinely new. Two minutes is the "seconds old" case the
 guard exists to catch: a mid-day re-run, a catch-up, or a normal day all clear
-it. `--force` excuses only a short but positive window: a window whose end sits
-behind the recorded baseline is refused even with `--force`, because the baseline
-would move backwards.
+it. A second refusal band covers the same case minutes wide instead of seconds: a
+second Step 6 pass has no planned window left - the first pass consumed it - so
+when no usable record exists and the window it would close is under ten minutes
+(600s), `update` refuses and says the state was already closed minutes ago,
+because accepting it would move the baseline to a moment no `plan` announced.
+Editing the Markdown after Step 6 therefore means re-running `plan` (Step 2), not
+just the `md-to-items` and `update` pair; the index dedupes by date and title, so
+even a forced re-run cannot append the same entries twice. `--force` excuses only
+a short but positive window: a window whose end sits behind the recorded baseline
+is refused even with `--force`, because the baseline would move backwards.
 
 ### Step 7 - Deliver
 
 Present the HTML file, and summarize the same content in chat (never only a
-link). Keep the Markdown and state JSON on disk but deliver only the HTML. Then
+link). Keep the Markdown, the state JSON and the run artifacts `.markets.json`,
+`.feeds.json` and `.items.json` in `$OUT`, but deliver only the HTML. Then
 delete the run's staging directory, so every research scratch file goes with it
 and the next run starts from an empty path - the second line removes the
 `.staging` parent once it is empty:

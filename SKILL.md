@@ -55,9 +55,11 @@ evidence in `reference/feasibility.md`:
   Asia, Xinhua (news.cn), gov.cn, National Bureau of Statistics, PBoC, Caixin,
   Yicai, The Paper, CLS, STCN.
 - **Discovery-only or blocked originals**: Reuters, AP, FT, Bloomberg, WSJ
-  return 401/403 to automated fetch. Include such a story only when it is
-  corroborated, keep the original link so the user can open it manually, and
-  tag it unverified.
+  return 401/403 to automated fetch, but the story is still included. When a
+  fetchable primary corroborates it, cite that primary as the `[src:]` and the
+  wire as an `[alt:OUTLET](url)` link; when none does, cite the wire itself and
+  tag the line `#unverified`. Keep the original link so the user can open it
+  manually.
 
 Hard rules:
 
@@ -177,7 +179,7 @@ story. Google News item links never resolve to the publisher, so never cite them
 Before giving up on a blocked wire URL, try one archive read:
 `https://web.archive.org/web/2/<url>` (or the availability API
 `https://archive.org/wayback/available?url=<url>`). If a snapshot exists, verify
-the story from it and still cite the original publisher URL, tagged #unverified.
+the story from it and still cite the original publisher URL.
 Same-day stories usually have no snapshot yet. If no canonical URL can be found
 at all, add a clearly-labelled search fallback instead of omitting the story:
 `[find:AP](https://www.google.com/search?q=<headline>+site:apnews.com)`.

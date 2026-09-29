@@ -127,8 +127,8 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 
 ## Limitations
 
-- Some outlets are simply unreadable by automated fetch. The skill records them
-  as unverified rather than pretending otherwise.
+- Some outlets are simply unreadable by automated fetch. The provenance marker
+  records the shallower reading rather than pretending otherwise.
 - The 72-hour cap means a run after several missed days is a partial catch-up,
   and the briefing says so.
 - `examples/sample-briefing.md` and its rendered HTML show the exact format.

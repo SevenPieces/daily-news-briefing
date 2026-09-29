@@ -96,12 +96,17 @@ A 402 is treated as final and is never retried, so a licensing gate costs one
 request, not eight.
 
 It prints JSON per URL: `url`, `ok`, `status`, `attempts`, `via`, `profile`,
-`title`, `publishedAt`, `dateSource`, `bytes`, `textLength` - and `error`
-instead of the content fields when a URL could not be fetched. `--text` adds the
-stripped page text; `--out FILE` writes the JSON to a file. The top level also
-carries `rounds` and `profiles`. It exits 0 only when every URL was fetched, 1
-when any failed, and 2 on a usage error or an unreadable file.
+`title`, `publishedAt`, `dateSource`, `charset`, `bytes`, `textLength`, plus
+`garbled` when the decoded text still carries replacement characters - and
+`error` instead of the content fields when a URL could not be fetched. `--text`
+adds the stripped page text; `--out FILE` writes the JSON to a file. The top
+level also carries `rounds` and `profiles`. It exits 0 only when every URL was
+fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
 
+- **Pass `--text` to read an article's body.** It is the flag that returns the
+  page text, truncated, while the `textLength` the tool prints either way is
+  the full stripped length; a record whose summary needs the body must be read
+  with `--text`.
 - **Vary the profile before concluding "blocked".** One failed attempt is
   evidence of nothing - but a 402 from a licensing gate is an answer, not a
   challenge.
@@ -109,11 +114,27 @@ when any failed, and 2 on a usage error or an unreadable file.
   reported: a bare modification time is later than publication and can silently
   move an item across the coverage window. A modification time alone is not a
   publication time - see "Reused URLs" below for when a modified page is still
-  in-window.
+  in-window. `dateSource` is whatever label the tool printed, copied character
+  for character - `datePublished`, `article:published_time`,
+  `itemprop:datePublished`, `meta:pubdate`, `time[datetime]`,
+  `dateModified` - so the names are examples, not a closed set. When it is
+  neither `datePublished` nor `dateModified`, the label alone cannot settle
+  an in-window update: the reused-URL check needs its own look at the page.
 - `web_fetch` remains a valid fallback when the script cannot reach a page.
 - `[prov:full]` means the cited page's own article body was obtained; a publisher
   RSS abstract is `[prov:feed]`. Neither is second-class - the marker states depth
   only, never that an HTTP request succeeded.
+- **A 200 whose text is unreadable is not a fetch.** A page that is not UTF-8
+  (GBK or GB18030) decodes as mojibake unless its charset is honoured, so
+  `fetch-page.mjs` reads the charset from the content-type header, falling back
+  to the page's own `<meta>`, and probes the bytes themselves when the page
+  declares nothing, reporting the encoding it decoded with as `charset`. A page
+  the reader reports as `garbled` has yielded no article body: record the item as
+  `[prov:link]`, report it as a body-less fetch in the
+  run-level gate notes with the failed charset in `gateNote`, and never upgrade
+  the page to a stronger marker on the strength of its 200 alone. A publisher
+  feed that describes the story in its own words still earns `[prov:feed]` -
+  the marker names where the words came from.
 
 ### Reused URLs - `datePublished` outside, `dateModified` and `pubDate` inside
 

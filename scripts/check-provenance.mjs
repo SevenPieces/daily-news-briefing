@@ -5,10 +5,12 @@
 // marker is the reader-facing statement of how deep the evidence is, and
 // render-html.mjs turns it into a coloured dot. This gate mirrors the
 // renderer's idea of what a story is, so it cannot pass a line the renderer
-// publishes as a story.
+// publishes as a story, and it additionally requires the [src:] reference
+// md-to-items.mjs indexes by, so a counted line cannot vanish from the state
+// index unnoticed.
 //
 // Usage: node check-provenance.mjs <briefing.md>
-// Exit: 0 OK, 1 a story violates the marker rule, 2 usage or unreadable file.
+// Exit: 0 OK, 1 a story line violates a gate rule, 2 usage or unreadable file.
 
 import { readFileSync } from 'node:fs';
 
@@ -34,6 +36,7 @@ const NON_STORY_SECTION = /^(Sources|Coverage note|Market snapshot)/i;
 
 const counts = { full: 0, feed: 0, link: 0 };
 const missing = [];
+const unsourced = [];
 const misplaced = [];
 const duplicated = [];
 let items = 0;
@@ -50,16 +53,33 @@ md.split('\n').forEach((line, i) => {
   if (!line.includes('[src:') && !/^-\s+\*\*/.test(line)) return;
 
   items++;
-  const found = [...line.matchAll(ANY_MARKER)].map((m) => m[1]);
   const where = { line: i + 1, section, preview: line.slice(0, 72) };
+  // md-to-items.mjs indexes only lines carrying a [src:] reference, so a story
+  // line without one would pass this gate and then vanish from the state index.
+  // Report it here instead of letting the loss stay silent.
+  if (!line.includes('[src:')) { unsourced.push(where); return; }
+  const found = [...line.matchAll(ANY_MARKER)].map((m) => m[1]);
   if (found.length === 0) missing.push(where);
   else if (found.length > 1) duplicated.push(Object.assign({ markers: found.join(', ') }, where));
   else if (!ENDS_WITH.test(line)) misplaced.push(Object.assign({ marker: found[0] }, where));
   else counts[found[0]]++;
 });
 
-const problems = missing.length + misplaced.length + duplicated.length;
-console.log('stories: ' + items + ' | full: ' + counts.full + ' | feed: ' + counts.feed + ' | link: ' + counts.link);
+const problems = missing.length + unsourced.length + misplaced.length + duplicated.length;
+// The printed buckets partition the total: every counted line lands in exactly
+// one of the three markers or one of the four failure lists, and a zero bucket
+// is omitted, so the numbers always add up.
+console.log('story lines: ' + items + ' | full: ' + counts.full
+  + ' | feed: ' + counts.feed + ' | link: ' + counts.link
+  + (unsourced.length ? ' | unsourced: ' + unsourced.length : '')
+  + (missing.length ? ' | unmarked: ' + missing.length : '')
+  + (misplaced.length ? ' | misplaced: ' + misplaced.length : '')
+  + (duplicated.length ? ' | duplicated: ' + duplicated.length : ''));
+if (unsourced.length) {
+  console.log('  FAIL: ' + unsourced.length + ' story item(s) carry no [src:...] source reference');
+  for (const u of unsourced.slice(0, 10)) console.log('    line ' + u.line + '  (' + u.section + ')  ' + u.preview);
+  if (unsourced.length > 10) console.log('    ... and ' + (unsourced.length - 10) + ' more');
+}
 if (missing.length) {
   console.log('  FAIL: ' + missing.length + ' story item(s) carry no [prov:*] marker');
   for (const m of missing.slice(0, 10)) console.log('    line ' + m.line + '  (' + m.section + ')  ' + m.preview);

@@ -264,9 +264,9 @@ Write "$OUT/briefing-$DATE.md" in the exact structure in
 
 ~~~sh
 node "$SKILL/scripts/md-to-items.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/.items.json" \
-  && node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
-node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"   # must print DIVERSITY: OK
-node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md" # must print PROVENANCE: OK
+  && node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md" \
+  && node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md"
+node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
 node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/briefing-$DATE.html"
 ~~~
 
@@ -278,6 +278,14 @@ fails, do not run `update`. The `&&` chain still guards the run, though not
 because a stale file would survive: `md-to-items` removes the `.items.json`
 before it parses, so a failed parse leaves no file behind and `update` then
 fails loudly with exit 2 on the missing index instead of ingesting one.
+
+Both gates run **before** `update`, on purpose: the coverage note's per-story-line
+counts and its fetch figure are copied from their output, and a note reconciled
+after `update` means editing the Markdown once the window is already closed.
+Re-running `plan` for that edit computes a window from the new baseline - under
+`MIN_WINDOW_SECONDS` - so `update` refuses it and the fresh `plannedWindow` is
+left behind for the next run to reuse. Get the note right in this pass; run
+`update` only once both gates have printed OK.
 
 `update` also refuses an `--items` file older than the window it would close -
 `md-to-items` runs after `plan`, so the index it writes is never that old - so a

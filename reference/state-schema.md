@@ -159,6 +159,11 @@ only appears in a briefing when that new development exists.
   `until` that does not parse - is no longer discarded in silence: `update`
   writes one stderr line naming the reason and saying coverage would end at this
   run's own clock instead, then continues.
+  A refused second pass leaves the opposite residue: the `plannedWindow` a
+  re-`plan` wrote is *fresh* and ahead of the baseline, so the predicate accepts
+  it and the next run reuses a window of seconds, whose own `update`
+  `MIN_WINDOW_SECONDS` then refuses. A run that re-plans after its `update` must
+  delete that record, or plan against a different `--state` file.
 - **Re-run guard**: a second Step 6 pass has no planned window left to consume -
   the first pass sets `plannedWindow = null` - so it would close a window measured
   only from `lastBriefingAt` to its own clock. When that window is under

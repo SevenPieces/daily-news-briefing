@@ -86,9 +86,10 @@ node "$SKILL/scripts/collect-markets.mjs" --out "$OUT/.markets.json"
 node "$SKILL/scripts/fetch-feeds.mjs" --since <SINCE> --out "$OUT/.feeds.json"
 # ... write "$OUT/briefing-$DATE.md" against reference/output-contract.md ...
 node "$SKILL/scripts/md-to-items.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/.items.json" \
-  && node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
-node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"   # must print DIVERSITY: OK
-node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md" # must print PROVENANCE: OK
+  && node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md" \
+  && node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md"
+# gates first: the coverage note's counts are copied from check-provenance's output
+node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
 node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/briefing-$DATE.html"
 ```
 

@@ -1,5 +1,5 @@
 # Daily Briefing / 每日简报 - 2026-09-10
-_Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 48h (2026-09-08 17:00 -> 2026-09-10 17:00 Asia/Shanghai) - 3 days not covered_
+_Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00 Asia/Shanghai) - 48h not covered_
 
 (ILLUSTRATIVE EXAMPLE - every story below is placeholder text, not real news.)
 
@@ -39,7 +39,10 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 - **[EXAMPLE] Trade talks resume** - Whether the narrowed agenda produces a framework this week. [src:EXAMPLE WIRE 2026-09-10 08:00](https://example.com/d) [alt:EXAMPLE POST](https://example.com/c) #developing [prov:link]
 
 ## Coverage note / 覆盖说明
-- Window: 2026-09-08 17:00 -> 2026-09-10 17:00 Asia/Shanghai (48h cap applied; 3 days not covered).
+- Window: covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00 Asia/Shanghai); the 48h before the window are not covered.
+- Provenance by story line: 3 full, 3 feed, 3 link - 9 story lines in all.
+- Fetch count: 24 distinct URL fetches, against a 20-30 target that stays guidance, not a gate.
+- Quiet aspects: Global Politics (quiet - no significant news today) and China 社会 (无重大新闻).
 - Searched: Global major-powers aspects and mainland China aspects. Not searched: sport, celebrity, markets beyond the snapshot.
 - 3 story lines cite a blocked wire original with no article body obtained; where a corroborating primary exists, it is cited as an [alt:] link.
 

@@ -33,8 +33,18 @@ Compute the window deterministically with the state script before collecting:
 - No previous briefing: the latest **24 hours**.
 - **Never ask the user which window to use.** The rule is identical in every
   run, interactive or not.
-- The header always prints the real coverage window, for example:
-  `Last briefing 2026-09-05 - covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00 Asia/Shanghai) - 48h not covered`.
+- The header always prints the real coverage window, in one of three shapes. An
+  uncapped window runs from the previous briefing to now and names its real
+  length:
+  `Last briefing 2026-09-08 - covering latest 48h (2026-09-08 17:00 ->
+  2026-09-10 17:00 Asia/Shanghai)`. A capped window prints 72h and then the
+  skipped span:
+  `Last briefing 2026-09-05 - covering latest 72h (2026-09-07 17:00 ->
+  2026-09-10 17:00 Asia/Shanghai) - 48h not covered`, and only a capped run
+  prints that clause. A first run with no previous briefing prints neither a
+  previous date nor a gap:
+  `No previous briefing - covering latest 24h (2026-09-09 17:00 ->
+  2026-09-10 17:00 Asia/Shanghai)`.
   The label's times are Asia/Shanghai (the header declares that zone), so the
   coverage note can quote them verbatim.
 - When the 72h cap bites, say how much was skipped in the coverage note.

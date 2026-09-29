@@ -152,8 +152,9 @@ schema is mandatory; the subagent fan-out is not. Each item must end with a
 fetched, date-stamped primary: a fetched article, a publisher's own RSS item, or
 - for blocked wire copy - a corroborating primary with the wire as an alt. If you
 do fan out, remember that a subagent is a fresh agent with no memory of this
-skill: give it the staging path `$STAGE` explicitly and require every scratch
-file to live there.
+skill: give it the resolved absolute path (for example
+`/.../briefings/.staging/2026-09-29`) rather than the variable name `$STAGE`,
+which a fresh shell cannot resolve, and require every scratch file to live there.
 
 ### Step 4b - Resolve wire headlines to publisher URLs
 
@@ -213,11 +214,13 @@ the missing index instead of ingesting one.
 previous run's index cannot be ingested as this run's.
 
 `update` then closes coverage at the window `plan` announced, and refuses to
-write when that window is shorter than six hours - a second run on the same day -
-unless you pass `--force`, which is only right once you have checked the run is
-genuinely new. `--force` excuses only a short but positive window: a window whose
-end sits behind the recorded baseline is refused even with `--force`, because the
-baseline would move backwards.
+write when that window is under two minutes (120s) - a second update moments
+after the last one - unless you pass `--force`, which is only right once you have
+checked the run is genuinely new. Two minutes is the "seconds old" case the
+guard exists to catch: a mid-day re-run, a catch-up, or a normal day all clear
+it. `--force` excuses only a short but positive window: a window whose end sits
+behind the recorded baseline is refused even with `--force`, because the baseline
+would move backwards.
 
 ### Step 7 - Deliver
 
@@ -228,7 +231,7 @@ and the next run starts from an empty path - the second line removes the
 `.staging` parent once it is empty:
 
 ~~~sh
-rm -rf "$STAGE"
+rm -rf "${STAGE:?}"
 rmdir "$OUT/.staging" 2>/dev/null || true
 ~~~
 

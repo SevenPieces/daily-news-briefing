@@ -17,7 +17,10 @@ import { readFileSync, statSync, writeFileSync } from 'node:fs';
 
 const MAX_WINDOW_HOURS = 72;
 const FIRST_RUN_HOURS = 24;
-const MIN_WINDOW_HOURS = 6;
+// "Seconds old" in the agreement, operationalised at two minutes: what the guard
+// catches is a second update moments after the last one, not a mid-day re-run or
+// a catch-up, which must proceed without --force.
+const MIN_WINDOW_SECONDS = 120;
 // A recorded plan older than this - or one that predates the last briefing - is
 // a leftover from an aborted run: ignore it and fall back to now.
 const PLANNED_WINDOW_MAX_AGE_HOURS = 12;
@@ -131,15 +134,28 @@ function planWindow(previousAt, now) {
 // cannot drift apart. A record fails it when its until is unparseable, sits
 // behind the last briefing, is older than PLANNED_WINDOW_MAX_AGE_HOURS, or lies
 // in the future - each is a leftover from an aborted run or a skewed clock,
-// never a window a live run announced. Returns the parsed end, or null when the
-// record is unusable and the caller must fall back to its own clock.
+// never a window a live run announced. The verdict names the refusal rather than
+// just returning null, because update must say which predicate failed before it
+// falls back to its own clock: an ignored record moves the stored baseline away
+// from the end the header announced, and that must not happen in silence.
+function classifyPlannedWindow(state, baseline, now) {
+  const planned = state && state.plannedWindow ? state.plannedWindow : null;
+  const plannedEnd = planned ? validDate(planned.until) : null;
+  // A recorded end that does not parse is a rejection like any other, and it
+  // must name itself too: the same warning covers every rejected record.
+  if (!plannedEnd) return { plannedEnd: null, reason: planned ? 'not a parseable date' : null };
+  if (baseline && plannedEnd.getTime() < baseline.getTime()) return { plannedEnd: null, reason: 'behind the baseline' };
+  if (now.getTime() - plannedEnd.getTime() > PLANNED_WINDOW_MAX_AGE_HOURS * HOUR) {
+    return { plannedEnd: null, reason: 'older than ' + PLANNED_WINDOW_MAX_AGE_HOURS + 'h' };
+  }
+  if (plannedEnd.getTime() > now.getTime() + CLOCK_SKEW_TOLERANCE_MS) return { plannedEnd: null, reason: 'in the future' };
+  return { plannedEnd, reason: null };
+}
+
+// The boolean plan asks for; the end is null exactly when the record is unusable
+// and the caller must fall back to its own clock.
 function usablePlannedWindow(state, baseline, now) {
-  const plannedEnd = state && state.plannedWindow ? validDate(state.plannedWindow.until) : null;
-  if (!plannedEnd) return null;
-  if (baseline && plannedEnd.getTime() < baseline.getTime()) return null;
-  if (now.getTime() - plannedEnd.getTime() > PLANNED_WINDOW_MAX_AGE_HOURS * HOUR) return null;
-  if (plannedEnd.getTime() > now.getTime() + CLOCK_SKEW_TOLERANCE_MS) return null;
-  return plannedEnd;
+  return classifyPlannedWindow(state, baseline, now).plannedEnd;
 }
 
 // Version 1 keyed items by a hash of the normalized headline and host and kept
@@ -268,8 +284,15 @@ function main() {
   // not move the baseline backwards or reopen a window that was never announced.
   const baseline = validDate(state.lastBriefingAt);
   // Same predicate plan applied before it announced: consume the recorded end
-  // only when it is a record plan would have announced too.
-  const plannedEnd = usablePlannedWindow(state, baseline, now);
+  // only when it is a record plan would have announced too. When it is refused,
+  // say so: coverage would end at this run's clock instead, and a silent fallback is
+  // exactly the announced-end/stored-baseline drift this change set removes.
+  const verdict = classifyPlannedWindow(state, baseline, now);
+  if (verdict.reason) {
+    process.stderr.write('update-state: the recorded planned window ends ' + state.plannedWindow.until + ', which is '
+      + verdict.reason + ', so it is ignored and coverage would end at this run\'s clock (' + nowIso + ') instead.\n');
+  }
+  const plannedEnd = verdict.plannedEnd;
   const coverageEnd = plannedEnd || now;
   const window = planWindow(state.lastBriefingAt, coverageEnd);
   const force = process.argv.includes('--force');
@@ -288,9 +311,19 @@ function main() {
     }
   }
 
+  // The window is measured from its own ends, not from window.hours: that field
+  // is rounded to a tenth of an hour for the label and cannot resolve the seconds
+  // these guards turn on (a two-minute window would read as 0.0h, and a window up
+  // to three minutes behind the baseline rounds to -0, which is not < 0). Whole
+  // seconds, floored: the threshold is a floor, so 119.9s is under two minutes
+  // while 120.0s is not.
+  const windowMs = validDate(window.until).getTime() - validDate(window.since).getTime();
+  const windowSeconds = Math.floor(windowMs / 1000);
+
   // --force excuses a short window, never an impossible one: a negative window
   // means the end used above sits behind the baseline, so the write is refused.
-  if (window.hours < 0) {
+  // Both guards read this one measurement, so they cannot disagree about the sign.
+  if (windowSeconds < 0) {
     process.stderr.write('update-state: coverage window would be ' + window.hours
       + 'h (its end is behind the last briefing), so the baseline cannot move backwards. Nothing was written. '
       + 'The recorded baseline can now only be corrupt by hand or by a backwards host clock: correct '
@@ -299,9 +332,9 @@ function main() {
     process.exit(3);
   }
 
-  if (window.hours < MIN_WINDOW_HOURS && !force) {
-    process.stderr.write('update-state: coverage window is only ' + window.hours + 'h (under ' + MIN_WINDOW_HOURS
-      + 'h), so this looks like a second run on the same day. Nothing was written. '
+  if (windowSeconds < MIN_WINDOW_SECONDS && !force) {
+    process.stderr.write('update-state: coverage window is only ' + windowSeconds + 's (under ' + MIN_WINDOW_SECONDS
+      + 's), so this looks like a second update moments after the last one. Nothing was written. '
       + 'Pass --force only after checking the run is genuinely new.\n');
     process.exit(3);
   }

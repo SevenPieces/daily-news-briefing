@@ -103,15 +103,27 @@ only appears in a briefing when that new development exists.
     record was stale - `coverageEnd` is update's own `now` and the announced end
     is whatever `plan` last printed, so the two need not match;
   - `plannedWindow = null`.
-- **Guard**: when the computed `window.hours` is positive but below
-  `MIN_WINDOW_HOURS` (6) and `--force` was not passed, `update` prints an
-  explanatory error to stderr and exits 3 **without writing**. `--force` excuses
-  only a short but **positive** window (under 6h). A window whose end is behind
-  `lastBriefingAt` - `hours` negative - is refused regardless of `--force` (exit
-  3), and the message says how to reset: correct `lastBriefingAt` in the state
-  file, or delete the state file and start fresh (which drops the recorded
-  coverage). The baseline can only be corrupt that way by hand or by a backwards
-  host clock, so refusing is the point; `--force` does not discard coverage.
+- **Guard**: when the window measured in whole seconds from its own ends is below
+  `MIN_WINDOW_SECONDS` (120, two minutes) and `--force` was not passed, `update`
+  prints an explanatory error to stderr and exits 3 **without writing**. The
+  threshold is the "seconds old" case the guard exists to catch - a second update
+  moments after the last one - so a mid-day re-run, a catch-up and a normal day
+  all clear it. The measurement floors, so 119.9s is under two minutes and is
+  refused while 120.0s is accepted. `--force` excuses only a short but
+  **positive** window (under two minutes). A window whose end is behind
+  `lastBriefingAt` - the window measured from its own ends is negative - is
+  refused regardless of `--force` (exit 3), and the message says how to reset:
+  correct `lastBriefingAt` in the state file, or delete the state file and start
+  fresh (which drops the recorded coverage). The baseline can only be corrupt
+  that way by hand or by a backwards host clock, so refusing is the point;
+  `--force` does not discard coverage. An accepted window under about 0.1h keeps
+  the existing tenth-of-an-hour rounding, so it is labelled `covering latest 0h`:
+  the label's shape is unchanged and no smaller unit is invented.
+  A recorded `plannedWindow` that the usability predicate above rejects - it sits
+  behind `lastBriefingAt`, is older than 12h, is in the future, or carries an
+  `until` that does not parse - is no longer discarded in silence: `update`
+  writes one stderr line naming the reason and saying coverage would end at this
+  run's own clock instead, then continues.
 - **Stale `--items` guard**: when `update` consumes a usable `plannedWindow`, an
   `--items` file whose mtime is older than that record's `until` minus 60
   seconds belongs to an earlier run, and `update` exits 3 with a message telling
@@ -191,4 +203,5 @@ adds `plannedWindow`; the conversion happens the next time `update` runs.
 
 Both accept --state and print JSON to stdout; update also accepts --items (the
 run's curated items array), --out (write target), --date (YYYY-MM-DD) and
---force (proceed when the window is under 6 hours but still positive; never when it is negative).
+--force (proceed when the window is under two minutes but still positive; never
+when it is negative).

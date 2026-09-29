@@ -130,13 +130,14 @@ row is dropped, re-timed or hand-picked.
 | China | Chinese | 经济, 时政, 商业, 科技, 外交, 军事, 社会 |
 
 Both sections use the same aspect order. Structural labels (Top stories, Market
-snapshot, Watchlist, Coverage note, Sources) are bilingual. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China. This rule takes precedence over the placement tie-break below: a story **about** Hong Kong, Taiwan or Macau belongs to the China section wherever the event happens, so the place-of-event test decides only the cross-border stories this rule does not already assign (`reference/output-contract.md`: US-China trade decided in Washington stays in Global).
+snapshot, Watchlist, Coverage note, Sources) are bilingual. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China. This rule takes precedence over the placement tie-break below: a story **about** Hong Kong, Taiwan or Macau belongs to the China section wherever the event happens, so the place-of-event test decides only the cross-border stories this rule does not already assign (for example, US-China trade decided in Washington stays in Global).
 
 **Placement tie-break.** The place the event happens decides the section. A
 Global outlet covering a China-subject policy story whose decision is made
-outside China stays in Global, with a China-implications note; a cross-border
-story whose event happens in China belongs to the China section. Disclose the
-call in the coverage note, so a reader can see why a story sits where it does.
+outside China stays in Global; a cross-border story whose event happens in China
+belongs to the China section; either way a cross-border story carries a
+China-implications note. Disclose the call in the coverage note, so a reader can
+see why a story sits where it does.
 
 ## Coverage note
 

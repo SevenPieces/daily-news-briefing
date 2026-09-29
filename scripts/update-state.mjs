@@ -230,6 +230,27 @@ function main() {
       // would leave the header declaring a window the state never stores.
       if (usablePlannedWindow(state, baseline, now)) {
         effective = state.plannedWindow;
+        // A reuse is announced rather than silent: a plannedWindow orphaned by
+        // an aborted run would otherwise become this run's window, and the next
+        // briefing would cover a window no live run chose. The record's age -
+        // measured from the end it announced, which is when plan wrote it - is
+        // what separates a record this run means from yesterday's leftover.
+        // A usable record may sit up to CLOCK_SKEW_TOLERANCE_MS ahead of this
+        // clock, and the raw difference would print as '-0.1h old' - or, once
+        // rounded, as '0h old' - claiming a past this clock never saw. Only a
+        // record behind this clock is announced by its age; one ahead of it is
+        // announced as ending in the future, in minutes because the tolerated
+        // skew band is minutes wide.
+        // stderr only: stdout prints the same JSON and this path writes nothing.
+        const recordedAt = validDate(effective.until);
+        const ageMs = now.getTime() - recordedAt.getTime();
+        const announced = ageMs >= 0
+          ? ' and is ' + round1(ageMs / HOUR) + 'h old'
+          : ' and lies ' + round1(-ageMs / 60000) + 'm ahead of this shell\'s clock';
+        process.stderr.write('update-state: reusing the planned window already recorded in ' + statePath
+          + ' and not computing a new one: it ends ' + effective.until + announced
+          + ', so it was announced by an earlier plan run. '
+          + 'Delete plannedWindow in the state file, or plan against a different --state file, for a fresh window.\n');
       } else {
         const payload = Object.assign({}, state, { plannedWindow: window });
         try {

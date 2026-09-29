@@ -21,6 +21,13 @@ const FIRST_RUN_HOURS = 24;
 // catches is a second update moments after the last one, not a mid-day re-run or
 // a catch-up, which must proceed without --force.
 const MIN_WINDOW_SECONDS = 120;
+// The seconds-old guard is narrow on purpose, so a re-run that spends a couple of
+// minutes fixing a typo and re-parsing the Markdown slips above it. A second
+// Step 6 pass has no planned window left - the first pass nulled it - and would
+// close a window measured only from the baseline to its own clock, which is a
+// re-run of a completed run, not a new briefing. This is the upper band of that
+// same case: still minutes, never hours.
+const RERUN_WINDOW_SECONDS = 600;
 // A recorded plan older than this - or one that predates the last briefing - is
 // a leftover from an aborted run: ignore it and fall back to now.
 const PLANNED_WINDOW_MAX_AGE_HOURS = 12;
@@ -360,10 +367,34 @@ function main() {
     process.exit(3);
   }
 
+  // The same case, minutes wide instead of seconds. A second Step 6 pass finds no
+  // record left - the first pass consumed it - so it would close a window measured
+  // only from the baseline to its own clock and move lastBriefingAt to a moment no
+  // plan announced, silently skipping the coverage in between. Refuse, and name
+  // both remedies rather than rewrite the baseline in silence.
+  if (!plannedEnd && windowSeconds < RERUN_WINDOW_SECONDS && !force) {
+    process.stderr.write('update-state: no usable planned window was recorded, and the window this update would close is only '
+      + windowSeconds + 's (under ' + RERUN_WINDOW_SECONDS + 's), so the state was already closed minutes ago (last briefing '
+      + state.lastBriefingAt + ') and this is a re-run of a completed run, not a new briefing. Nothing was written. '
+      + 'A re-run rewrites the coverage baseline to this shell\'s clock. Re-run plan (Step 2) so update has a window of its own '
+      + 'to consume, or pass --force only after checking the run is genuinely new.\n');
+    process.exit(3);
+  }
+
   const lastBriefingDate = arg('--date', dateKey(coverageEnd));
   const items = retained(state.items, now);
+  // A re-run of Step 6 appends the same curated lines a second time: the first
+  // pass consumed the planned window, so this pass rebuilds the index from the
+  // same Markdown and every story would land twice. An entry already held under
+  // the same date and title is this run's own earlier write, not a new story, so
+  // it is kept once. The key is the two stored fields the index is read by, and
+  // only entries already in the state are matched - the incoming batch is never
+  // compared with itself, so a line the Markdown repeats inside one run is still
+  // appended as many times as it is written.
+  const held = new Set(items.map((it) => String(it.date || '') + '\u0000' + String(it.title || '')));
+  let alreadyHeld = 0;
   for (const item of incoming) {
-    items.push({
+    const entry = {
       title: item.title || '',
       section: item.section || '',
       aspect: item.aspect || '',
@@ -375,7 +406,17 @@ function main() {
       // saw the story, not what the feed or the agent claimed.
       date: lastBriefingDate,
       lastSeen: nowIso,
-    });
+    };
+    if (held.has(entry.date + '\u0000' + entry.title)) {
+      alreadyHeld++;
+      continue;
+    }
+    items.push(entry);
+  }
+  if (alreadyHeld) {
+    process.stderr.write('update-state: ' + alreadyHeld + ' of ' + incoming.length + ' curated entries are already in the '
+      + 'index for ' + lastBriefingDate + ' with the same title, so they were kept once rather than appended again; this is a '
+      + 're-run of a completed Step 6, and the coverage baseline moved to ' + coverageEnd.toISOString() + ' all the same.\n');
   }
   const watchlist = buildWatchlist(items);
 

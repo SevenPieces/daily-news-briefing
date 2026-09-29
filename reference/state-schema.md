@@ -44,9 +44,18 @@ heading with no `### ` heading above it records an empty aspect.
 ## Items
 
 `items` is an **array**, one entry per story line per run, so a Top story repeated
-in its aspect section is indexed twice: no merging across runs, no story key, no
-derived state. `update` appends this run's curated items and stamps
-`date` and `lastSeen` itself - both are ignored if the input carries them.
+in its aspect section is indexed twice: no story key and no derived state.
+`update` appends this run's curated items and stamps `date` and `lastSeen` itself
+- both are ignored if the input carries them.
+
+The append is **idempotent for a re-run**. An entry already held under the same
+`date` and `title` is this run's own earlier write, not a new story, so it is kept
+once and not appended again. Those are the only two fields matched, and only
+entries already in the state are compared - the incoming batch is never compared
+with itself, so a line the Markdown repeats inside one run is still indexed as
+many times as it is written. Re-running Step 6 therefore cannot duplicate the
+index; it can still move the coverage baseline, which is why the re-run guard
+below refuses it.
 
 - `title`, `primaryUrl` - the cited headline and its primary link.
 - `section`, `aspect`, `outlet` - recorded as given, and read back as the index
@@ -133,6 +142,18 @@ only appears in a briefing when that new development exists.
   `until` that does not parse - is no longer discarded in silence: `update`
   writes one stderr line naming the reason and saying coverage would end at this
   run's own clock instead, then continues.
+- **Re-run guard**: a second Step 6 pass has no planned window left to consume -
+  the first pass sets `plannedWindow = null` - so it would close a window measured
+  only from `lastBriefingAt` to its own clock. When that window is under
+  `RERUN_WINDOW_SECONDS` (600, ten minutes) and `--force` was not passed, `update`
+  says the state was already closed minutes ago, prints an explanatory error to
+  stderr and exits 3 **without writing**: accepting it would move the baseline to a
+  moment no `plan` announced, and the next window would silently skip the coverage
+  in between. **Editing the Markdown after Step 6 therefore means re-running
+  `plan` (Step 2) as well**, because `update`'s record is consumed by the first
+  pass and a second `update` has no window of its own to consume; `--force`
+  accepts a re-run deliberately, and the index dedup (see Items) keeps even that
+  pass from appending the same entries twice.
 - **Stale `--items` guard**: when `update` consumes a usable `plannedWindow`, an
   `--items` file whose mtime is older than that record's `until` minus 60
   seconds belongs to an earlier run, and `update` exits 3 with a message telling
@@ -212,5 +233,6 @@ adds `plannedWindow`; the conversion happens the next time `update` runs.
 
 Both accept --state and print JSON to stdout; update also accepts --items (the
 run's curated items array), --out (write target), --date (YYYY-MM-DD) and
---force (proceed when the window is under two minutes but still positive; never
-when it is negative).
+--force (proceed when the window is under two minutes but still positive, or
+when a second Step 6 pass has no recorded window and the state was closed minutes
+ago; never when the window is negative).

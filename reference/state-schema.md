@@ -41,6 +41,12 @@ otherwise the aspect heading exactly as the contract spells it (`Economy` ...
 `Social`, `经济` ... `社会`). A story line that sits directly under a section
 heading with no `### ` heading above it records an empty aspect.
 
+A Top-story line is indexed as `section: global` whatever its language:
+`scripts/md-to-items.mjs` forces every bullet under `## Top stories` to
+`global`/`top`, so a Chinese Top story carries `section: global`, `aspect: top`
+rather than `china`. The index records where the line sits in the Markdown, so
+the override is the parser's and not a second placement decision.
+
 ## Items
 
 `items` is an **array**, one entry per story line per run, so a Top story repeated

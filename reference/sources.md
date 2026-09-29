@@ -11,11 +11,12 @@ content) and may be cited as the primary link.
 | Outlet | Domain | Section | Notes |
 |---|---|---|---|
 | BBC | bbc.com, bbc.co.uk | Global | RSS works and carries pubDate |
-| The Guardian | theguardian.com | Global | |
+| The Guardian | theguardian.com | Global | article pages answer HTTP 200 but the 1500-character excerpt is chrome only (5 of 5 fetches, printed textLength 7330-9675, 2026-09-30), so a Guardian item is `[prov:feed]` from the Guardian's own RSS unless the body is obtained another way |
 | Al Jazeera | aljazeera.com | Global | |
 | Nikkei Asia | asia.nikkei.com | Global, Business | |
 | SCMP | scmp.com | China, Global | curl is 403 but web_fetch is 200; use web_fetch |
-| Xinhua | news.cn | China | RSS is stale, use HTML |
+| Xinhua | news.cn | China | RSS is stale, use HTML; article pages answer 200 with a date-only `<meta name="publishdate">`, so `publishedAt` must come from a dated element in the body (probe 2026-09-30) |
+| 央广网 (CNR) | cnr.cn | China | article pages answer 200 with a date-only `<meta name="publishdate">`, so `publishedAt` must come from a dated element in the body (probe 2026-09-30) |
 | State Council | gov.cn | China | |
 | National Bureau of Statistics | stats.gov.cn | China, Economy | |
 | People's Bank of China | pbc.gov.cn | China, Economy | use https, not http |
@@ -26,6 +27,7 @@ content) and may be cited as the primary link.
 | STCN | stcn.com | China, Business | |
 | 光明网 (Guangming) | gmw.cn, politics.gmw.cn, m.gmw.cn | China | curl 200; homepage is a live dated index; article pages carry a full timestamp; no RSS (probe 2026-09-18) |
 | 香港政府新闻网 (HK Government News) | news.gov.hk | China (Hong Kong) | curl 200; static dated article pages are the primary; no fetchable RSS and no static dated index - discover via web_search (probe 2026-09-18) |
+| 中华人民共和国国防部 (MND) | mod.gov.cn | China, Military | **http only** - the https form fails to connect (`status 0`), so always fetch `http://`; article pages answer 200 with a date-only `meta:publishdate`, so `publishedAt` must come from a dated element; the registry's primary for the 军事 aspect (probe 2026-09-30) |
 
 ## Publisher RSS primaries (dated, citable)
 
@@ -38,7 +40,7 @@ subscription outlets #paywalled.
 | Outlet | Feeds | Note |
 |---|---|---|
 | Bloomberg | markets, economics, politics, technology (`feeds.bloomberg.com/<section>/news.rss`) | subscription; #paywalled |
-| The New York Times | World, Politics, Business, Technology (`rss.nytimes.com/services/xml/rss/nyt/*.xml`) | partly metered; #paywalled |
+| The New York Times | World, Politics, Business, Technology (`rss.nytimes.com/services/xml/rss/nyt/*.xml`) | article pages returned a hard HTTP 403 on every profile and both transports (8 attempts, 2026-09-30), a blocked wire's shape rather than a meter; its items come from NYT's own RSS as `[prov:feed]` - the blocked-wire treatment (AP/Reuters/FT/WSJ) minus the alt-link rule, since NYT publishes its own RSS; #paywalled |
 | NPR | `feeds.npr.org/1004/rss.xml` | |
 | DW | `rss.dw.com/rdf/rss-en-world` | RSS 1.0 / dc:date |
 | France 24 | `france24.com/en/rss` | |
@@ -60,12 +62,12 @@ Weibo hot search is unusable: it returns 302 to a login wall.
 ## UA-sensitive outlets - vary the profile, never record as blocked
 
 Some outlets answer 403 to one header profile and serve the page to another, and
-a browser User-Agent is NOT automatically the better one. Measured 2026-09-25 on
-live article pages:
+a browser User-Agent is NOT automatically the better one. Measured 2026-09-25
+and re-probed 2026-09-30, on live article pages:
 
 | Outlet | plain curl (default UA) | curl + browser UA | harness fetch | behaviour |
 |---|---|---|---|---|
-| France 24 | 200 | 403 | 200 or 404 | 200 with the DEFAULT User-Agent, including `datePublished`; the Chrome User-Agent is rejected |
+| France 24 | 200 | 403 | 200 or 404 | 200 with the DEFAULT User-Agent and `datePublished` on 2026-09-25, but the browser profile answered 200 on the FIRST attempt on 2026-09-30 (textLength 4223, `datePublished`) - the profile outcome is not stable, so try the profiles rather than assuming one |
 
 That is a profile preference, not a block. Treat France 24 as a fetch-verified
 primary, and vary the header profile rather than simply retrying.
@@ -117,8 +119,9 @@ fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
   publication time - see "Reused URLs" below for when a modified page is still
   in-window. `dateSource` is whatever label the tool printed, copied character
   for character - `datePublished`, `article:published_time`,
-  `itemprop:datePublished`, `meta:pubdate`, `time[datetime]`,
-  `dateModified` - so the names are examples, not a closed set. When it is
+  `itemprop:datePublished`, `meta:pubdate`, `meta:publishdate`,
+  `time[datetime]`, `dateModified` - so the names are examples, not a closed set.
+  When it is
   neither `datePublished` nor `dateModified`, the label alone cannot settle
   an in-window update: the reused-URL check needs its own look at the page.
 - `web_fetch` remains a valid fallback when the script cannot reach a page.

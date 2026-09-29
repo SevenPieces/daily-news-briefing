@@ -60,8 +60,8 @@ Two tiers, with the full registry in `reference/sources.md` and the probe
 evidence in `reference/feasibility.md`:
 
 - **Fetch-verified primaries**: BBC, SCMP, The Guardian, Al Jazeera, Nikkei
-  Asia, Xinhua (news.cn), gov.cn, National Bureau of Statistics, PBoC, Caixin,
-  Yicai, The Paper, CLS, STCN.
+  Asia, Xinhua (news.cn), 央广网 (CNR), gov.cn, 国防部 (mod.gov.cn), National
+  Bureau of Statistics, PBoC, Caixin, Yicai, The Paper, CLS, STCN.
 - **Discovery-only or blocked originals**: Reuters, AP, FT, Bloomberg, WSJ
   return 401/403 to automated fetch, but the story is still included. When a
   fetchable primary corroborates it, cite that primary as the `[src:]` and the

@@ -158,6 +158,10 @@ row is dropped, re-timed or hand-picked.
 | Global | English | Economy, Politics, Business, Tech, Foreign affairs, Military, Social |
 | China | Chinese | 经济, 时政, 商业, 科技, 外交, 军事, 社会 |
 
+A China line is written from the Chinese-language page. A Chinese outlet's
+foreign-language edition (`jp.news.cn`, `en.news.cn` and the like) is not the
+China source, however directly it carries the story.
+
 Both sections use the same aspect order. Structural labels (Top stories, Market
 snapshot, Watchlist, Coverage note, Sources) are bilingual. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China. This rule takes precedence over the placement tie-break below: a story **about** Hong Kong, Taiwan or Macau belongs to the China section wherever the event happens, so the place-of-event test decides only the cross-border stories this rule does not already assign (for example, US-China trade decided in Washington stays in Global).
 

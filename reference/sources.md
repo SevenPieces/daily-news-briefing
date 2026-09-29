@@ -189,7 +189,6 @@ contribute them, do not drop them.
 | SCMP RSS (scmp.com/rss/91/feed, /rss/4/feed) | HTTP 301, no feed; use web_fetch (curl is 403) |
 | Caixin RSS (caixin.com/rss/) | returns HTML, not a feed |
 | Stooq CSV quotes | endpoint removed |
-| Global Times RSS (globaltimes.cn/rss/outbrain.xml) | channel date is current but item pubDates are weeks/months old, so the window filter drops every item |
 | Nikkei Asia RSS (asia.nikkei.com/rss/feed/nar) | RSS 1.0; item blocks carry title and link only, NO date - usable for discovery, but fetch the article for its timestamp |
 | AP RSS (apnews.com/index.rss, /hub/*.rss) | 403 - use corroborated alt links instead |
 | Reuters RSS (arc/outboundfeeds, feeds.reuters.com) | 404 / discontinued |
@@ -204,17 +203,20 @@ pool: **BBC** (world, business, technology, politics), **The Guardian** (same
 four), **Al Jazeera**, **Bloomberg** (markets, economics, politics, technology),
 **The New York Times** (World, Politics, Business, Technology), **NPR**, **DW**,
 **France 24**, **CBC**, **Sky News** and **The Economist**; plus **Global Times**
-under China. SCMP and Nikkei RSS are unusable as dated feeds (above) - reach
-Nikkei and SCMP with web_fetch. Add one-off feeds per run with `--feeds url1,url2`.
+under China, live and dated (the 2026-09-29 dry run returned 50 items from it,
+every one clearing that run's window filter - one dated measurement, not a fixed
+yield). SCMP and Nikkei RSS are unusable as dated feeds (above) - reach Nikkei
+and SCMP with web_fetch. Add one-off feeds per run with `--feeds url1,url2`.
 
 ### China has no feed backbone
 
 The China section's one configured direct feed - **Global Times, politics** - is
-itself unusable: its item pubDates are weeks or months old, so the window filter
-drops every item (the row in the dead-feed table above). There is no usable
-mainland RSS either: People's Daily and every Xinhua channel are frozen (same
-table), Caixin's RSS endpoint returns HTML, and SCMP's redirects. Its coverage is
-therefore **search-derived**: discover with
+live and dated: in the 2026-09-29 dry run all its items cleared the window
+filter, one day's count rather than a standing yield. One live feed is still not
+a backbone, and no usable mainland RSS exists either: People's Daily and every
+Xinhua channel are frozen (see the dead-feed table above), Caixin's RSS endpoint
+returns HTML, and SCMP's redirects. Its coverage is therefore
+**search-derived**: discover with
 `web_search` against the Tier 1 Chinese outlets, read the page with
 `scripts/fetch-page.mjs`, and cite what was actually verified. The cited outlet
 set will vary from run to run; that is a property of the sources, not a

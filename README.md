@@ -50,10 +50,10 @@ most recent 72 hours, or the latest 24 hours when there is no previous briefing.
 When the cap bites, the coverage note says how much was skipped.
 
 A briefing contains two sections across seven aspects (economy, politics,
-business, tech, foreign affairs, military, social) with 20-25 items allocated by
-importance, 3-5 Top Stories, a market snapshot, a watchlist, a coverage note and
-a sources list. Global content is English; China content is Chinese; structural
-labels are bilingual.
+business, tech, foreign affairs, military, social) with 20-25 distinct
+stories allocated by importance, 3-5 Top Stories, a market snapshot, a
+watchlist, a coverage note and a sources list. Global content is English; China
+content is Chinese; structural labels are bilingual.
 
 ## Repository layout
 

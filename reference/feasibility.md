@@ -95,8 +95,8 @@ Both are discovery-only; a primary fetch is always required.
 
 ## Fetch budget
 
-Writing a summary requires reading the article, so items are bounded by the
-fetch budget: with 20-30 fetches, target 20-25 items total.
+Writing a summary requires reading the article, so stories are bounded by the
+fetch budget: with 20-30 fetches, target 20-25 distinct stories total.
 
 ## Probe log 2026-09-18 - promoted outlets
 

@@ -21,7 +21,7 @@ trace to a real source. Nothing is invented, estimated, or padded.
 | Aspects | Economy, Politics, Business, Tech, Foreign affairs, Military, Social |
 | Global scope | Major powers: US, EU/UK, Russia and Eastern Europe, China-world relations, Japan and the Koreas, Middle East, international institutions |
 | China scope | Mainland national, plus Hong Kong, Taiwan and Macau, and city-level stories when they are genuinely worth noting |
-| Volume | 20-25 items total, allocated by importance; empty aspects are omitted |
+| Volume | 20-25 distinct stories total; a Top story repeated in its section is one story but two story lines; allocated by importance; empty aspects are omitted |
 | Budget | 20-30 fetches, about 3-5 minutes |
 
 ## 2. Coverage window (never ask)
@@ -38,7 +38,8 @@ Compute the window deterministically with the state script before collecting:
   The label's times are Asia/Shanghai (the header declares that zone), so the
   coverage note can quote them verbatim.
 - When the 72h cap bites, say how much was skipped in the coverage note.
-- A 72h window can span three days; keep the 20-25 item target and allocate by importance.
+- A 72h window can span three days; keep the 20-25 distinct-story target and
+  allocate by importance.
 - Watchlist items appear only when they have a new development inside the
   window. Older background is omitted, not smuggled in.
 

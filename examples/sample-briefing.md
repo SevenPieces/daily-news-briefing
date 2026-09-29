@@ -1,10 +1,10 @@
 # Daily Briefing / 每日简报 - 2026-09-10
-_Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 48h (2026-09-08 17:00 -> 2026-09-10 17:00) - 3 days not covered_
+_Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - covering latest 48h (2026-09-08 17:00 -> 2026-09-10 17:00 Asia/Shanghai) - 3 days not covered_
 
 (ILLUSTRATIVE EXAMPLE - every story below is placeholder text, not real news.)
 
 ## Top stories / 今日要闻
-- **[EXAMPLE] Central bank holds rates steady** - Policymakers left the benchmark rate unchanged and signalled patience. [src:EXAMPLE WIRE 2026-09-10 09:30](https://example.com/a) #new [prov:link]
+- **[EXAMPLE] Central bank holds rates steady** - Policymakers left the benchmark rate unchanged and signalled patience. [src:EXAMPLE WIRE 2026-09-10 09:30](https://example.com/a) [alt:EXAMPLE NEWS](https://example.com/b) #new [prov:link]
 - **[EXAMPLE] Chip export rules tightened** - New licensing requirements target advanced packaging tools. [src:EXAMPLE NEWS 2026-09-10 07:10](https://example.com/b) [alt:EXAMPLE POST](https://example.com/c) #followup [prov:feed]
 
 ## Market snapshot / 市场快照
@@ -15,14 +15,14 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 
 ## Global
 ### Economy
-- **[EXAMPLE] Trade talks resume** - Negotiators returned to the table with a narrowed agenda. [src:EXAMPLE WIRE 2026-09-10 08:00](https://example.com/d) #developing [prov:link]
+- **[EXAMPLE] Trade talks resume** - Negotiators returned to the table with a narrowed agenda. [src:EXAMPLE WIRE 2026-09-10 08:00](https://example.com/d) [alt:EXAMPLE POST](https://example.com/c) #developing [prov:link]
 - **[EXAMPLE] Inflation cools slightly** - The headline index eased for a second month. [src:EXAMPLE NEWS 2026-09-10 06:20](https://example.com/e) #followup [prov:feed]
 
 ### Politics
 (quiet - no significant news today)
 
 ### Tech
-- **[EXAMPLE] Regulator opens AI review** - A consultation on model transparency closed for comment. [src:EXAMPLE TECH 2026-09-10 05:40](https://example.com/f) #new #unverified [prov:full]
+- **[EXAMPLE] Regulator opens AI review** - A consultation on model transparency closed for comment. [src:EXAMPLE TECH 2026-09-10 05:40](https://example.com/f) #new [prov:full]
 
 ## China / 中国
 ### 经济
@@ -36,12 +36,12 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 (无重大新闻)
 
 ## Watchlist / 持续关注
-- **[EXAMPLE] Trade talks resume** - Whether the narrowed agenda produces a framework this week. [src:EXAMPLE WIRE](https://example.com/d) #developing [prov:link]
+- **[EXAMPLE] Trade talks resume** - Whether the narrowed agenda produces a framework this week. [src:EXAMPLE WIRE 2026-09-10 08:00](https://example.com/d) [alt:EXAMPLE POST](https://example.com/c) #developing [prov:link]
 
 ## Coverage note / 覆盖说明
-- Window: 2026-09-08 17:00 -> 2026-09-10 17:00 (48h cap applied; 3 days not covered).
+- Window: 2026-09-08 17:00 -> 2026-09-10 17:00 Asia/Shanghai (48h cap applied; 3 days not covered).
 - Searched: Global major-powers aspects and mainland China aspects. Not searched: sport, celebrity, markets beyond the snapshot.
-- 1 item points to a blocked original and was tagged unverified.
+- 3 story lines cite a blocked wire original with no article body obtained; where a corroborating primary exists, it is cited as an [alt:] link.
 
 ## Sources / 来源
 - EXAMPLE WIRE - https://example.com/a

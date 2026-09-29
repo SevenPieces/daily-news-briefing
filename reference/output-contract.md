@@ -58,7 +58,8 @@ Every story is exactly one Markdown list item:
 - alt is optional: use one whenever a credible second outlet corroborates the
   story, at most three, never padding.
 - Tags are space separated at the end: #new, #followup, #developing,
-  #paywalled, #unverified.
+  #paywalled, #unverified. `#developing` means the story is still unfolding,
+  not that the run is tracking it.
 - Never put more than one story in a list item, and never omit src.
 - `[find:OUTLET](SEARCH_URL)` is an optional, clearly-labelled search fallback
   for a blocked wire outlet whose canonical URL could not be resolved. It renders
@@ -88,8 +89,10 @@ Every story is exactly one Markdown list item:
       - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) [prov:feed] #new
 
 - **A watchlist entry is an unresolved developing story that also has a new
-  development inside the window.** A story with no movement in this run does not
-  appear; older background is omitted, not smuggled in.
+  development inside the window.** A briefing lists a watchlist title only when
+  it moved inside the window; retention in the state's watchlist is not a report
+  (see `reference/state-schema.md`). A story with no movement in this run does
+  not appear; older background is omitted, not smuggled in.
 
 ## Provenance and read-original
 

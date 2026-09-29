@@ -66,8 +66,10 @@ next update. Nothing else ages out.
 
 ## Watchlist
 
-Rebuilt on every update from the retained items with `watch: true`, deduplicated
-by title keeping the earliest `date`:
+The watchlist is a **retention list**, not a to-report list: it keeps every
+retained item flagged `watch`, whether or not a later briefing reports it. It is
+rebuilt on every update from the retained items with `watch: true`,
+deduplicated by title keeping the earliest `date`:
 
     { "title": "...", "date": "YYYY-MM-DD", "lastSeen": "<ISO>" }
 

@@ -97,7 +97,7 @@ Every story is exactly one Markdown list item:
 |---|---|---|
 | `[prov:full]` | the cited page's own article body was obtained | the page's own article body |
 | `[prov:feed]` | the publisher's own RSS description (the page may be blocked) | the feed's own description |
-| `[prov:link]` | no article body was obtained from the cited URL, for any reason | a corroborating primary when one exists, otherwise the headline alone; #unverified follows hard rule 9, not this marker |
+| `[prov:link]` | no article body was obtained from the cited URL, for any reason | a corroborating primary when one exists, otherwise the headline alone |
 
 Reasons for `[prov:link]`: a blocked wire, a 402 licensing gate, or an HTTP 200
 that returned only masthead and navigation. The marker names where the summary's

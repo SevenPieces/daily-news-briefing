@@ -11,8 +11,9 @@ Produce one dated briefing with two sections, **Global** (English) and **China**
 as a single self-contained HTML file plus its Markdown source. Every item must
 trace to a real source. Nothing is invented, estimated, or padded.
 
-Read `reference/sources.md` before collecting, `reference/output-contract.md`
-before writing, and `reference/state-schema.md` before touching state.
+Read `reference/sources.md` before collecting, `reference/research-input.md`
+before researching, `reference/output-contract.md` before writing, and
+`reference/state-schema.md` before touching state.
 
 ## 1. Inputs and configuration
 
@@ -88,9 +89,24 @@ Hard rules:
 ~~~sh
 if [ -n "$BRIEFING_DIR" ]; then OUT="$BRIEFING_DIR"; else OUT="$PWD/briefings"; fi
 mkdir -p "$OUT"
+STAGE="$OUT/.staging/$(TZ=Asia/Shanghai date +%F)"
+mkdir -p "$STAGE"
 SKILL="${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing"
-DATE=$(date +%F)
+DATE=$(TZ=Asia/Shanghai date +%F)
 ~~~
+
+These variables live only in the shell that ran this block: each step usually runs
+in a fresh shell, so a later step must re-establish the same values - `OUT=...;
+STAGE=...; SKILL=...; DATE=...` - in its own shell before it uses `$OUT`,
+`$STAGE`, `$SKILL` or `$DATE`. `STAGE` and `DATE` carry `$(TZ=Asia/Shanghai date
++%F)`, so a run that spans Shanghai midnight must reuse the values its first
+execution captured rather than recompute them at 00:05: a new `DATE` would
+retarget the briefing filename (Step 6), and a new `STAGE` would aim Step 7's
+delete at a directory the run never used, leaving the real scratch behind. The
+date is fixed for the whole run.
+
+All research scratch - subagent output, feed dumps, fetched pages - lives under
+`$STAGE`, and the run deletes that directory before it finishes (Step 7).
 
 ### Step 2 - Compute the window
 
@@ -99,7 +115,16 @@ node "$SKILL/scripts/update-state.mjs" plan --state "$OUT/briefing-state.json"
 ~~~
 
 It prints JSON containing since, until, hours, capped, previousBriefingAt and a
-one-line label. Use those values verbatim in the header and coverage note.
+one-line label. Use those values verbatim in the header and coverage note: when
+the state already holds a **usable** `plannedWindow` - `until` parses, is not
+behind `lastBriefingAt`, is at most 12h old and no more than 5 minutes ahead -
+`plan` reuses it, so it computes nothing, writes nothing and prints the recorded
+window instead. Otherwise it computes a fresh window and records it in the state
+as `plannedWindow`, and `update` - in this same shell - consumes that record and
+closes coverage at the same end time instead of reading its own clock. The shared
+predicate is `usablePlannedWindow(state, baseline, now)` in
+`scripts/update-state.mjs`, so the announced end and the stored baseline agree
+whenever `update` consumes a usable record.
 
 ### Step 3 - Collect deterministically, in parallel
 
@@ -121,14 +146,14 @@ Use web_search for discovery, then read candidate articles with
 UA-sensitive gate does not read as a block, and it reports which date field it
 used); `web_fetch` remains a valid fallback. It never retries a 402: that is a
 licensing answer, not a transient failure. Cover
-both sections across all seven aspects, respecting the budget. Fan out with
-subagents if it helps, but each item must end with a fetched, date-stamped
-primary: a fetched article, a publisher's own RSS item, or - for blocked wire
-copy - a corroborating primary with the wire as an alt. Capture, per item:
-section, aspect, headline, 1-2 sentence summary in the section language, primary
-outlet, primary URL, published time, optional secondary URL, provenance
-(full | feed | link), and flags (new, followup, developing, paywalled,
-unverified).
+both sections across all seven aspects, respecting the budget, and capture every
+candidate in the research-report schema in `reference/research-input.md`. That
+schema is mandatory; the subagent fan-out is not. Each item must end with a
+fetched, date-stamped primary: a fetched article, a publisher's own RSS item, or
+- for blocked wire copy - a corroborating primary with the wire as an alt. If you
+do fan out, remember that a subagent is a fresh agent with no memory of this
+skill: give it the staging path `$STAGE` explicitly and require every scratch
+file to live there.
 
 ### Step 4b - Resolve wire headlines to publisher URLs
 
@@ -155,8 +180,12 @@ duplicate coverage of one event into a single item and keep the strongest two
 outlets. Rank items by importance within each aspect. Select the 3-5 Top
 Stories by cross-source prominence. All Hong Kong, Taiwan and Macau stories
 belong in the China section, because they are parts of China; this holds even
-when a foreign power is involved. Other cross-section stories (US-China trade,
-chips) live in Global with a China-implications note.
+when a foreign power is involved, and it overrides the placement tie-break, so a
+story *about* Hong Kong, Taiwan or Macau is China's wherever the event happens.
+Cross-section stories follow the placement tie-break in
+`reference/output-contract.md` for everything the rule above does not assign: the
+place the event happens decides the section; disclose the call in the coverage
+note.
 
 ### Step 6 - Write Markdown, render, update state
 
@@ -164,16 +193,44 @@ Write "$OUT/briefing-$DATE.md" in the exact structure in
 `reference/output-contract.md`, then:
 
 ~~~sh
-node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
+node "$SKILL/scripts/md-to-items.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/.items.json" \
+  && node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
 node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"   # must print DIVERSITY: OK
 node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md" # must print PROVENANCE: OK
 node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/briefing-$DATE.html"
 ~~~
 
+`md-to-items.mjs` parses the Markdown you just wrote into the item index `update`
+stores, so it runs first, and `update` must be run in that same shell so it
+consumes the window `plan` announced there. If `md-to-items` fails, do not run
+`update`. The `&&` chain still guards the run, though not because a stale file
+would survive: `md-to-items` removes the `.items.json` before it parses, so a
+failed parse leaves no file behind and `update` then fails loudly with exit 2 on
+the missing index instead of ingesting one.
+
+`update` also refuses an `--items` file older than the window it would close -
+`md-to-items` runs after `plan`, so the index it writes is never that old - so a
+previous run's index cannot be ingested as this run's.
+
+`update` then closes coverage at the window `plan` announced, and refuses to
+write when that window is shorter than six hours - a second run on the same day -
+unless you pass `--force`, which is only right once you have checked the run is
+genuinely new. `--force` excuses only a short but positive window: a window whose
+end sits behind the recorded baseline is refused even with `--force`, because the
+baseline would move backwards.
+
 ### Step 7 - Deliver
 
 Present the HTML file, and summarize the same content in chat (never only a
-link). Keep the Markdown and state JSON on disk but deliver only the HTML.
+link). Keep the Markdown and state JSON on disk but deliver only the HTML. Then
+delete the run's staging directory, so every research scratch file goes with it
+and the next run starts from an empty path - the second line removes the
+`.staging` parent once it is empty:
+
+~~~sh
+rm -rf "$STAGE"
+rmdir "$OUT/.staging" 2>/dev/null || true
+~~~
 
 ## 5. Output contract
 
@@ -191,11 +248,16 @@ English; China content is Chinese. Structural labels are bilingual.
 - Window matches the rule: previous briefing to now, capped at 72h; 24h when
   there is no previous briefing; no question was asked.
 - Every item has a primary link and an in-window publication time.
+- Headlines are cited **verbatim** from the publisher: no rewording, no
+  truncation, no translation.
 - No aggregator-only item; no paywalled paraphrase.
 - Blocked wire stories carry a canonical publisher URL (resolved by site search),
   cited as an `[alt:...]` link, not a Google News redirect.
 - Market rows cover every instrument the collector returned, in its order, each with an as-of time; yield rows use basis points (changeBp); unavailable instruments are labelled.
 - Top stories are the 3-5 most corroborated items.
+- `#new` and `#followup` are your own classification, made against the item
+  titles the state holds for the last seven days; the state derives nothing, so
+  the tags are only as good as that comparison.
 - Every story carries exactly one provenance marker: `[prov:full]` only for
   pages actually fetched, `[prov:feed]` for publisher RSS, `[prov:link]` for
   headline+link only. #paywalled items carry the publisher's own feed abstract,

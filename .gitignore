@@ -23,5 +23,6 @@ briefing-state.json
 .items.json
 .markets.json
 .feeds.json
+.staging/
 briefing-*.md
 briefing-*.html

@@ -106,12 +106,29 @@ when any failed, and 2 on a usage error or an unreadable file.
   evidence of nothing - but a 402 from a licensing gate is an answer, not a
   challenge.
 - **Prefer `datePublished` over `dateModified`.** That is why `dateSource` is
-  reported: a page's modification time is later than its publication time and
-  will silently move an item across the coverage window. When `dateSource` is
-  `dateModified`, cite the outlet's RSS `pubDate` instead.
+  reported: a bare modification time is later than publication and can silently
+  move an item across the coverage window. A modification time alone is not a
+  publication time - see "Reused URLs" below for when a modified page is still
+  in-window.
 - `web_fetch` remains a valid fallback when the script cannot reach a page.
 - A page you actually retrieved is `[prov:full]`; a publisher RSS abstract is
   `[prov:feed]`. Neither is second-class - the marker states depth only.
+
+### Reused URLs - `datePublished` outside, `dateModified` and `pubDate` inside
+
+Some outlets update one article URL in place (BBC does this constantly), so a page
+can carry a `datePublished` outside the coverage window while `dateModified` and
+the publisher RSS `pubDate` are both inside it. Check all three fields before
+accepting or rejecting such an item.
+
+- `dateModified` **and** the RSS `pubDate` inside the window: the item IS an
+  in-window update. Include it, cite the update time as the story's published
+  time, record the field as `dateSource`, and disclose the original publication
+  date in the coverage note.
+- A modification time alone, with no RSS match and no new facts inside the window:
+  do not admit it.
+
+Report the disagreement between page and feed in the run-level gate notes.
 
 ## Tier 2 - blocked originals (corroborated alt links)
 
@@ -167,6 +184,21 @@ four), **Al Jazeera**, **Bloomberg** (markets, economics, politics, technology),
 **France 24**, **CBC**, **Sky News** and **The Economist**; plus **Global Times**
 under China. SCMP and Nikkei RSS are unusable as dated feeds (above) - reach
 Nikkei and SCMP with web_fetch. Add one-off feeds per run with `--feeds url1,url2`.
+
+### China has no feed backbone
+
+The China section's one configured direct feed - **Global Times, politics** - is
+itself unusable: its item pubDates are weeks or months old, so the window filter
+drops every item (the row in the dead-feed table above). There is no usable
+mainland RSS either: People's Daily and every Xinhua channel are frozen (same
+table), Caixin's RSS endpoint returns HTML, and SCMP's redirects. Its coverage is
+therefore **search-derived**: discover with
+`web_search` against the Tier 1 Chinese outlets, read the page with
+`scripts/fetch-page.mjs`, and cite what was actually verified. The cited outlet
+set will vary from run to run; that is a property of the sources, not a
+regression. Widen the China discovery queries across the aspect headings
+(including 外交, 军事, 社会, 商业, 科技 and 香港) rather than leaning on one
+outlet to fill seven aspects.
 
 ## Per-aspect search starters
 

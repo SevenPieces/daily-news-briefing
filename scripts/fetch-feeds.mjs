@@ -59,6 +59,14 @@ const CHINA_QUERIES = [
   { q: '中国 时政', aspect: 'politics' },
   { q: '中国 科技 人工智能', aspect: 'tech' },
   { q: '中国 社会 民生', aspect: 'social' },
+  // China has one direct feed (Global Times, politics) and no usable mainland
+  // RSS, so its outlet set is search-derived. These queries widen the aspect
+  // headings the searches reach instead of leaning on one outlet to fill seven.
+  { q: '中国 外交 外交部', aspect: 'foreign' },
+  { q: '中国 军事 国防', aspect: 'military' },
+  { q: '中国 商业 企业', aspect: 'business' },
+  { q: '中国 科技 突破', aspect: 'tech' },
+  { q: '香港 政策 经济 民生', aspect: 'politics' },
 ];
 
 function arg(name, fallback) {

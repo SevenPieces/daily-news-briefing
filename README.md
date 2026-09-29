@@ -14,7 +14,7 @@ estimated, or padded.
 |---|---|
 | `briefing-YYYY-MM-DD.html` | The deliverable: self-contained, dark theme, collapsible aspects, print styles, source badges and a working search box |
 | `briefing-YYYY-MM-DD.md` | The editable source of the same briefing |
-| `briefing-state.json` | Run state: the previous briefing's timestamp and story history, so the next run can size its window and tag `#new` / `#followup` |
+| `briefing-state.json` | The coverage baseline and a seven-day index of recent stories; the agent classifies `#new` / `#followup` against it |
 
 Outputs go to `./briefings` under the working directory, or to `$BRIEFING_DIR`
 when that is set.
@@ -61,6 +61,7 @@ labels are bilingual.
 SKILL.md                       the skill itself - start here
 reference/sources.md           the two-tier source registry
 reference/output-contract.md   the exact briefing grammar
+reference/research-input.md    the mandatory per-story research schema
 reference/state-schema.md      the state file format
 reference/feasibility.md       fetch probes: which outlets can actually be read
 scripts/check-diversity.mjs    fails a section that rests on a single outlet
@@ -68,6 +69,7 @@ scripts/check-provenance.mjs   fails any story missing exactly one [prov:*] mark
 scripts/collect-markets.mjs    keyless market data (Yahoo Finance, Eastmoney)
 scripts/fetch-page.mjs         reads article pages with retry and profile variation
 scripts/fetch-feeds.mjs        publisher RSS feeds plus discovery-only items
+scripts/md-to-items.mjs        Markdown -> the item index update stores
 scripts/render-html.mjs        Markdown -> self-contained HTML
 scripts/update-state.mjs       computes the window, records the run
 examples/                      an illustrative sample briefing
@@ -77,12 +79,14 @@ examples/                      an illustrative sample briefing
 
 ```sh
 SKILL=~/.dsh/skills/daily-news-briefing
-OUT=${BRIEFING_DIR:-$PWD/briefings}; mkdir -p "$OUT"; DATE=$(date +%F)
+OUT=${BRIEFING_DIR:-$PWD/briefings}; mkdir -p "$OUT"; DATE=$(TZ=Asia/Shanghai date +%F)
 
 node "$SKILL/scripts/update-state.mjs" plan --state "$OUT/briefing-state.json"
 node "$SKILL/scripts/collect-markets.mjs" --out "$OUT/.markets.json"
 node "$SKILL/scripts/fetch-feeds.mjs" --since <SINCE> --out "$OUT/.feeds.json"
 # ... write "$OUT/briefing-$DATE.md" against reference/output-contract.md ...
+node "$SKILL/scripts/md-to-items.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/.items.json" \
+  && node "$SKILL/scripts/update-state.mjs" update --state "$OUT/briefing-state.json" --items "$OUT/.items.json" --out "$OUT/briefing-state.json" --date "$DATE"
 node "$SKILL/scripts/check-diversity.mjs" "$OUT/briefing-$DATE.md"   # must print DIVERSITY: OK
 node "$SKILL/scripts/check-provenance.mjs" "$OUT/briefing-$DATE.md" # must print PROVENANCE: OK
 node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/briefing-$DATE.html"
@@ -90,7 +94,8 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 
 | Script | Role |
 |---|---|
-| `update-state.mjs` | `plan` computes the coverage window; `update` records the run and the story history |
+| `md-to-items.mjs` | Parses the briefing Markdown into the item index `update` consumes |
+| `update-state.mjs` | `plan` computes the coverage window and records it; `update` appends this run's items, rebuilds the watchlist and writes the state |
 | `collect-markets.mjs` | Yahoo Finance (keyless), with Eastmoney as the cross-check for the China 10-year bond row |
 | `fetch-feeds.mjs` | Publisher RSS feeds (dated, usable as primaries) and Google News items (discovery only) |
 | `check-diversity.mjs` | Exits non-zero when a section's primaries are all one outlet |

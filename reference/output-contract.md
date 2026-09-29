@@ -6,7 +6,7 @@
 |---|---|
 | briefing-YYYY-MM-DD.md | editable source, written by the agent |
 | briefing-YYYY-MM-DD.html | the deliverable, produced by render-html.mjs |
-| briefing-state.json | memory, written by update-state.mjs |
+| briefing-state.json | memory, written by update-state.mjs (plan records the window; update writes the state) |
 
 Deliver only the HTML. Keep the Markdown and state on disk.
 
@@ -55,18 +55,41 @@ Every story is exactly one Markdown list item:
 - The summary is one or two sentences in the section language.
 - src carries the primary outlet and its publication time, and its link target
   is the primary URL.
-- alt is optional and may repeat.
+- alt is optional: use one whenever a credible second outlet corroborates the
+  story, at most three, never padding.
 - Tags are space separated at the end: #new, #followup, #developing,
   #paywalled, #unverified.
 - Never put more than one story in a list item, and never omit src.
 - `[find:OUTLET](SEARCH_URL)` is an optional, clearly-labelled search fallback
   for a blocked wire outlet whose canonical URL could not be resolved. It renders
   as a dashed "search" badge.
+- A URL containing `)` is truncated at the first `)` by both `md-to-items.mjs` and
+  `render-html.mjs`, so the index stays faithful to the delivered link; prefer a
+  primary URL without parentheses.
 - A provenance marker is **required** and is the final token on the line:
   `[prov:full]`, `[prov:feed]` or `[prov:link]`, exactly one per story. Trailing
   `#tags` after the marker are also accepted. It renders as a coloured dot, not
   as text. `scripts/check-provenance.mjs` enforces this and exits non-zero when a
   story has no marker, more than one, or a marker that is not the last token.
+
+## Classification, headlines and the watchlist
+
+- **New versus follow-up is the agent's classification.** `briefing-state.json`
+  holds the item titles of the last seven days and derives nothing; the agent
+  reads that index and decides whether a story is `#new` or `#followup`.
+  `scripts/update-state.mjs` never writes either flag.
+- **Cite the publisher's headline verbatim.** Do not reword, translate or trim
+  it. The headline is evidence, and a reworded one no longer matches what the
+  reader finds at the link.
+- **Tag placement.** `#tags` normally precede `[prov:*]`. Trailing tags after
+  the marker are also accepted by the provenance gate, so both of these pass:
+
+      - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) #new [prov:feed]
+      - **Headline** - Summary. [src:BBC 2026-09-10 09:30](https://primary) [prov:feed] #new
+
+- **A watchlist entry is an unresolved developing story that also has a new
+  development inside the window.** A story with no movement in this run does not
+  appear; older background is omitted, not smuggled in.
 
 ## Provenance and read-original
 
@@ -94,6 +117,11 @@ with this note, quoted verbatim:
 
     (Values from the collector APIs, each row with its own as-of time in Asia/Shanghai. Yields are quoted in basis points: changeBp is the move in percentage points x 100.)
 
+Stale as-of times are normal: a weekend or exchange-holiday close, or a pre-open
+value, carries the last published time rather than the current one. Explain each
+one in the coverage note. The table shape stays exactly as specified above - no
+row is dropped, re-timed or hand-picked.
+
 ## Section rules
 
 | Section | Language | Aspect headings |
@@ -102,8 +130,31 @@ with this note, quoted verbatim:
 | China | Chinese | 经济, 时政, 商业, 科技, 外交, 军事, 社会 |
 
 Both sections use the same aspect order. Structural labels (Top stories, Market
-snapshot, Watchlist, Coverage note, Sources) are bilingual. Cross-section
-stories live in Global with a China-implications note. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China.
+snapshot, Watchlist, Coverage note, Sources) are bilingual. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China. This rule takes precedence over the placement tie-break below: a story **about** Hong Kong, Taiwan or Macau belongs to the China section wherever the event happens, so the place-of-event test decides only the cross-border stories this rule does not already assign (`reference/output-contract.md`: US-China trade decided in Washington stays in Global).
+
+**Placement tie-break.** The place the event happens decides the section. A
+Global outlet covering a China-subject policy story whose decision is made
+outside China stays in Global, with a China-implications note; a cross-border
+story whose event happens in China belongs to the China section. Disclose the
+call in the coverage note, so a reader can see why a story sits where it does.
+
+## Coverage note
+
+The coverage note has a **fixed part** and a **variable part**. The fixed part
+must contain:
+
+- the header window sentence **verbatim** - the same dates, times and zone as the
+  parenthesised label in the metadata line;
+- item provenance counts - how many items came from each of full, feed and link;
+- the section-placement disclosure - any call made under the tie-break above;
+- the quiet aspects - every aspect with no significant news, named rather than
+  silently omitted;
+- the stale-data explanation - any market row whose as-of time is older than the
+  run, and why.
+
+The variable part is free: add anything else the run judges worth noting (a
+capped window, a licence gate that blocked a wire, two reports in conflict). Keep
+it short and plain.
 
 ## HTML features
 

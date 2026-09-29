@@ -16,6 +16,7 @@ trace to a real source. Nothing is invented, estimated, or padded.
 | Key | Default |
 |---|---|
 | Output directory | $BRIEFING_DIR, else ./briefings under the working directory |
+| Skill root | $SKILL, else ${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing; pre-set it to run a candidate revision |
 | Timezone | Asia/Shanghai |
 | Sections | Global, China |
 | Aspects | Economy, Politics, Business, Tech, Foreign affairs, Military, Social |
@@ -118,7 +119,7 @@ if [ -n "$BRIEFING_DIR" ]; then OUT="$BRIEFING_DIR"; else OUT="$PWD/briefings"; 
 mkdir -p "$OUT"
 STAGE="$OUT/.staging/$(TZ=Asia/Shanghai date +%F)"
 mkdir -p "$STAGE"
-SKILL="${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing"
+SKILL="${SKILL:-${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing}"
 DATE=$(TZ=Asia/Shanghai date +%F)
 ~~~
 

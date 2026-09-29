@@ -65,7 +65,7 @@ reference/research-input.md    the mandatory per-story research schema
 reference/state-schema.md      the state file format
 reference/feasibility.md       fetch probes: which outlets can actually be read
 scripts/check-diversity.mjs    fails a section that rests on a single outlet
-scripts/check-provenance.mjs   fails any story missing exactly one [prov:*] marker
+scripts/check-provenance.mjs   fails a story line missing [src:] or [prov:*] marker
 scripts/collect-markets.mjs    keyless market data (Yahoo Finance, Eastmoney)
 scripts/fetch-page.mjs         reads article pages with retry and profile variation
 scripts/fetch-feeds.mjs        publisher RSS feeds plus discovery-only items
@@ -99,7 +99,7 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 | `collect-markets.mjs` | Yahoo Finance (keyless), with Eastmoney as the cross-check for the China 10-year bond row |
 | `fetch-feeds.mjs` | Publisher RSS feeds (dated, usable as primaries) and Google News items (discovery only) |
 | `check-diversity.mjs` | Exits non-zero when a section's primaries are all one outlet |
-| `check-provenance.mjs` | Exits non-zero when a story lacks exactly one `[prov:*]` marker |
+| `check-provenance.mjs` | Exits non-zero when a story line lacks a `[src:]` reference or exactly one `[prov:*]` marker |
 | `fetch-page.mjs` | Reads an article page with retry and browser/plain profile variation; reports `dateSource` |
 | `render-html.mjs` | Markdown to self-contained HTML |
 

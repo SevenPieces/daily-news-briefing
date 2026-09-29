@@ -210,19 +210,22 @@ pool: **BBC** (world, business, technology, politics), **The Guardian** (same
 four), **Al Jazeera**, **Bloomberg** (markets, economics, politics, technology),
 **The New York Times** (World, Politics, Business, Technology), **NPR**, **DW**,
 **France 24**, **CBC**, **Sky News** and **The Economist**; plus **Global Times**
-under China, live and dated (the 2026-09-29 dry run returned 50 items from it,
-every one clearing that run's window filter - one dated measurement, not a fixed
-yield). SCMP and Nikkei RSS are unusable as dated feeds (above) - reach Nikkei
-and SCMP with web_fetch. Add one-off feeds per run with `--feeds url1,url2`.
+under China, live but with an in-window yield that varies: all 50 raw items it
+returned cleared the window filter in the 2026-09-29 dry run, and none did in
+the production run later that evening, so its item dates cannot be relied
+on. SCMP and Nikkei RSS are unusable as dated feeds (above) - reach Nikkei
+and SCMP with web_fetch. Add one-off feeds per run with
+`--feeds url1,url2`.
 
 ### China has no feed backbone
 
 The China section's one configured direct feed - **Global Times, politics** - is
-live and dated: in the 2026-09-29 dry run all its items cleared the window
-filter, one day's count rather than a standing yield. One live feed is still not
-a backbone, and no usable mainland RSS exists either: People's Daily and every
-Xinhua channel are frozen (see the dead-feed table above), Caixin's RSS endpoint
-returns HTML, and SCMP's redirects. Its coverage is therefore
+live, but its in-window yield varies: all 50 raw items cleared the window filter
+in the 2026-09-29 dry run and none did in the production run later that
+evening, so its item dates cannot be relied on. One live feed is still not
+a backbone, and no usable mainland RSS exists either: People's Daily and
+every Xinhua channel are frozen (see the dead-feed table above), Caixin's RSS
+endpoint returns HTML, and SCMP's redirects. Its coverage is therefore
 **search-derived**: discover with
 `web_search` against the Tier 1 Chinese outlets, read the page with
 `scripts/fetch-page.mjs`, and cite what was actually verified. The cited outlet

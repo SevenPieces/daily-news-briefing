@@ -159,6 +159,10 @@ whenever `update` consumes a usable record.
 
 ### Step 3 - Collect deterministically, in parallel
 
+`fetch-feeds.mjs` takes `--since` from the plan JSON Step 2 printed - that
+JSON's `window.since` field, the announced window's start, not the shell's
+clock.
+
 ~~~sh
 node "$SKILL/scripts/collect-markets.mjs" --out "$OUT/.markets.json"
 node "$SKILL/scripts/fetch-feeds.mjs" --since <SINCE> --out "$OUT/.feeds.json"

@@ -101,7 +101,7 @@ function parseStory(line) {
 }
 
 const PROV = {
-  full: ['p-full', 'Verified: article body obtained from the cited page'],
+  full: ['p-full', 'Article body obtained from the cited page'],
   feed: ['p-feed', 'Publisher feed: summary from the outlet own RSS'],
   link: ['p-link', 'Link only: open the original to read'],
 };
@@ -191,7 +191,7 @@ const NON_STORY_SECTION = /^(Sources|Coverage note|Market snapshot)/i;
 // The one-line provenance key, repeated under every story-bearing section
 // heading so a reader has it in view without hovering a dot. Sections excluded
 // by NON_STORY_SECTION carry no dots, so they get no key.
-const PROV_KEY = '<p class="provkey"><span class="prov p-full"></span>Verified<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>';
+const PROV_KEY = '<p class="provkey"><span class="prov p-full"></span>Article body<span class="sep">&middot;</span><span class="prov p-feed"></span>Publisher feed<span class="sep">&middot;</span><span class="prov p-link"></span>Link only</p>';
 
 function flushList() { if (inList) { html.push('</ul>'); inList = false; } }
 function flushPlain() { if (inPlain) { html.push('</ul>'); inPlain = false; } }

@@ -44,7 +44,7 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 - Fetch count: 24 distinct URL fetches, against a 20-30 target that stays guidance, not a gate.
 - Quiet aspects: Global Politics (quiet - no significant news today) and China 社会 (无重大新闻).
 - Searched: Global major-powers aspects and mainland China aspects. Not searched: sport, celebrity, markets beyond the snapshot.
-- 3 story lines cite a blocked wire original with no article body obtained; where a corroborating primary exists, it is cited as an [alt:] link.
+- Provenance note: no story line here is a blocked wire with an unresolved canonical URL, so the [find:] search-badge case does not arise; an [alt:] link only marks a corroborating second report.
 
 ## Sources / 来源
 - EXAMPLE WIRE - https://example.com/a

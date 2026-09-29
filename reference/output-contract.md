@@ -63,11 +63,20 @@ Every story is exactly one Markdown list item:
   story, at most three, never padding.
 - Tags are space separated at the end: #new, #followup, #developing,
   #paywalled, #unverified. `#developing` means the story is still unfolding,
-  not that the run is tracking it.
+  not that the run is tracking it. `#unverified` marks a wire cited without a
+  fetchable primary; a publisher's own dated RSS item is itself a primary, so a
+  line carried from it is never `#unverified`.
 - Never put more than one story in a list item, and never omit src.
-- `[find:OUTLET](SEARCH_URL)` is an optional, clearly-labelled search fallback
-  for a blocked wire outlet whose canonical URL could not be resolved. It renders
-  as a dashed "search" badge.
+- `[find:OUTLET](SEARCH_URL)` is a clearly-labelled search fallback for a
+  blocked wire outlet whose canonical URL could not be resolved. It renders as a
+  dashed "search" badge, never replaces the mandatory `[src:]`, and a search URL
+  is never a primary link.
+- That is the one case where `[src:]` does not point at a primary URL: it still
+  carries the wire outlet and its publication time, its link target is the same
+  search URL, the line is tagged `#unverified`, and
+  `[find:OUTLET](SEARCH_URL)` repeats that URL so the badge says search rather
+  than article:
+  `[src:Reuters 2026-09-10 09:30](https://www.google.com/search?q=HEADLINE) #unverified [find:Reuters](https://www.google.com/search?q=HEADLINE) [prov:link]`
 - A URL containing `)` is truncated at the first `)` by both `md-to-items.mjs` and
   `render-html.mjs`, so the index stays faithful to the delivered link; prefer a
   primary URL without parentheses.
@@ -102,7 +111,9 @@ Every story is exactly one Markdown list item:
   development inside the window.** A briefing lists a watchlist title only when
   it moved inside the window; retention in the state's watchlist is not a report
   (see `reference/state-schema.md`). A story with no movement in this run does
-  not appear; older background is omitted, not smuggled in.
+  not appear; older background is omitted, not smuggled in. A Watchlist line
+  uses the language of the story's own reporting - English for a Global outlet,
+  Chinese for a Chinese one - while the section label stays bilingual.
 
 ## Provenance and read-original
 
@@ -178,9 +189,11 @@ equal the number of stories in the briefing when no story line is repeated.
   Watchlist entry is a story line for these counts even though it is an
   unresolved developing story. Repeating a story is the writer's choice, never a
   requirement, so never duplicate a story to move the counts;
-- the fetch count - how many distinct URL fetches the run made (one per URL,
-  however many HTTP requests the retries cost), against the 20-30 target, which
-  stays guidance and not a gate;
+- the fetch count - how many distinct **article-page** fetches the run made (one
+  per URL, however many HTTP requests the retries cost), against the 20-30
+  target, which stays guidance and not a gate. The deterministic collectors'
+  polls - the feed URLs in `.feeds.json` and the market instruments in
+  `.markets.json` - are not article-page fetches and are not part of this count;
 - the section-placement disclosure - any call made under the tie-break above;
 - the quiet aspects - every aspect with no significant news, named rather than
   silently omitted;

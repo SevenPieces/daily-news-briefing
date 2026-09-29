@@ -60,7 +60,8 @@ Every story is exactly one Markdown list item:
 - src carries the primary outlet and its publication time, and its link target
   is the primary URL.
 - alt is optional: use one whenever a credible second outlet corroborates the
-  story, at most three, never padding.
+  same event - check that page's own title, not a search snippet - at most
+  three, never padding.
 - Tags are space separated at the end: #new, #followup, #developing,
   #paywalled, #unverified. `#developing` means the story is still unfolding,
   not that the run is tracking it. `#unverified` marks a wire cited without a

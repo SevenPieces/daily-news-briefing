@@ -355,4 +355,7 @@ writeFileSync(outPath, doc);
 // repeated, and is larger only when a story is deliberately printed twice - a
 // Top story also shown in its aspect - which is the writer's choice, never a
 // requirement.
-process.stdout.write(JSON.stringify({ out: outPath, bytes: doc.length, storyLines: storyIndex, sections: secIndex + 1, aspects: aspIndex + 1 }) + '\n');
+// bytes is the size of the file just written, in real UTF-8 bytes. It used to
+// be String#length, which counts UTF-16 code units: right for pure ASCII,
+// wrong by thousands on a bilingual briefing (44382 reported for 46970 bytes).
+process.stdout.write(JSON.stringify({ out: outPath, bytes: Buffer.byteLength(doc, 'utf8'), storyLines: storyIndex, sections: secIndex + 1, aspects: aspIndex + 1 }) + '\n');

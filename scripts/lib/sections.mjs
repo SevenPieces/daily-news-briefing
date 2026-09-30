@@ -59,6 +59,15 @@ export function isStoryLine(line) {
   return line.includes('[src:') || /^-\s+\*\*/.test(line);
 }
 
+/**
+ * Whether the line carries a real [src:...](url) reference. Stricter than a
+ * bare 'includes("[src:")' on purpose: prose that merely mentions the marker -
+ * a Coverage-note bullet explaining the grammar - must not read as a story.
+ */
+export function hasSourceRef(line) {
+  return /\[src:[^\]]*\]\(/.test(line);
+}
+
 /** The [src:OUTLET YYYY-MM-DD HH:MM](url) reference, or null. */
 export function sourceRef(line) {
   const m = /\[src:(.+?)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.exec(line);
@@ -82,4 +91,73 @@ export function headings(md) {
  */
 export function unknownHeadings(md) {
   return headings(md).filter((h) => h.section === null);
+}
+
+// The Coverage note is paragraphs. One optional sub-heading is blessed - the
+// '### Additional notes / 补充说明' a real run used to hold Chinese-language
+// notes - and anything else there is a structural deviation, which no gate
+// caught before: a '###' and a bullet under it passed both gates on 2026-09-30.
+const COVERAGE_SUBHEADING = new Set(['additional notes', '补充说明']);
+
+function subheadingAllowedInCoverage(text) {
+  return text.split('/').map((half) => half.trim().toLowerCase())
+    .some((half) => COVERAGE_SUBHEADING.has(half));
+}
+
+/**
+ * Structural checks shared by both gates. Every problem is a hard failure:
+ * a section heading they cannot map, a sub-heading outside the two story
+ * sections, a sub-heading the Coverage note does not define, or a story-shaped
+ * bullet sitting in a section that holds no stories.
+ *
+ * @returns {{line: number, kind: string, text: string}[]}
+ */
+export function structureProblems(md) {
+  const problems = [];
+  const lines = md.split(/\r?\n/);
+  let sectionKey = null;
+  let coverageSubheadingSeen = false;
+
+  lines.forEach((line, i) => {
+    if (line.startsWith('## ')) {
+      const text = line.slice(3).trim();
+      sectionKey = sectionOf(text);
+      coverageSubheadingSeen = false;
+      if (sectionKey === null) problems.push({ line: i + 1, kind: 'unmapped-section', text });
+      return;
+    }
+    if (line.startsWith('### ')) {
+      const text = line.slice(4).trim();
+      if (sectionKey === 'coverage') {
+        if (!subheadingAllowedInCoverage(text)) {
+          problems.push({ line: i + 1, kind: 'coverage-subheading', text });
+        } else if (coverageSubheadingSeen) {
+          problems.push({ line: i + 1, kind: 'duplicate-coverage-subheading', text });
+        } else {
+          coverageSubheadingSeen = true;
+        }
+      } else if (sectionKey !== 'global' && sectionKey !== 'china') {
+        problems.push({ line: i + 1, kind: 'stray-subheading', text });
+      }
+      return;
+    }
+    if (sectionKey !== null && !STORY_SECTIONS.has(sectionKey)
+        && isStoryLine(line) && hasSourceRef(line)) {
+      problems.push({ line: i + 1, kind: 'story-outside-story-section', text: line.slice(0, 72) });
+    }
+  });
+
+  return problems;
+}
+
+/** One human-readable line per structural problem, for a tool's stderr. */
+export function describeProblems(problems) {
+  const label = {
+    'unmapped-section': 'unrecognised "## " section heading',
+    'coverage-subheading': 'sub-heading the Coverage note does not define',
+    'duplicate-coverage-subheading': 'second Coverage-note sub-heading',
+    'stray-subheading': 'sub-heading outside Global, China or the Coverage note',
+    'story-outside-story-section': 'story-shaped bullet in a section that holds no stories',
+  };
+  return problems.map((p) => 'line ' + p.line + '  ' + (label[p.kind] || p.kind) + ': "' + p.text + '"');
 }

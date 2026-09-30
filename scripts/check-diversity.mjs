@@ -3,21 +3,23 @@
 // A section whose primaries all come from one outlet fails.
 // Usage: node check-diversity.mjs <briefing.md>
 import { readFileSync } from 'node:fs';
-import { isStoryLine, sectionOf, sourceRef, unknownHeadings } from './lib/sections.mjs';
+import { describeProblems, isStoryLine, sectionOf, sourceRef, structureProblems } from './lib/sections.mjs';
 
 const file = process.argv[2];
 if (!file) { console.error('usage: check-diversity.mjs <briefing.md>'); process.exit(2); }
 const md = readFileSync(file, 'utf8');
 
 // A heading this gate cannot map used to leave its whole section unchecked
-// while the gate still printed DIVERSITY: OK. Refuse it instead.
-const unknown = unknownHeadings(md);
-if (unknown.length) {
-  console.error('check-diversity: unrecognised section heading(s): '
-    + unknown.map((h) => 'line ' + h.line + ' "## ' + h.text + '"').join(', '));
-  console.error('  Every "## " heading must be a contract section (Top stories, Global, China,'
+// while the gate still printed DIVERSITY: OK. Refuse the structure instead.
+const structure = structureProblems(md);
+if (structure.length) {
+  console.error('check-diversity: the briefing does not match the output contract:');
+  for (const l of describeProblems(structure)) console.error('  ' + l);
+  console.error('  "## " headings must be contract sections (Top stories, Global, China,'
     + ' Watchlist, Market snapshot, Coverage note, Sources, in either language);'
-    + ' an unmapped heading would leave its bullets unchecked.');
+    + ' aspects sit under Global and China; the Coverage note is paragraphs plus at most'
+    + ' one "### Additional notes / 补充说明"; and only Top stories, Global, China and'
+    + ' the Watchlist carry story lines.');
   process.exit(2);
 }
 

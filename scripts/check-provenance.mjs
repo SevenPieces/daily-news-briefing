@@ -13,7 +13,7 @@
 // Exit: 0 OK, 1 a story line violates a gate rule, 2 usage or unreadable file.
 
 import { readFileSync } from 'node:fs';
-import { STORY_SECTIONS, isStoryLine, sectionOf, unknownHeadings } from './lib/sections.mjs';
+import { STORY_SECTIONS, describeProblems, isStoryLine, sectionOf, structureProblems } from './lib/sections.mjs';
 
 const file = process.argv[2];
 if (!file) { console.error('usage: check-provenance.mjs <briefing.md>'); process.exit(2); }
@@ -31,15 +31,18 @@ const ANY_MARKER = /\[prov:(full|feed|link)\]/g;      // count every marker, to 
 // the end of the line, so trailing tags after the marker are accepted.
 const ENDS_WITH = /\[prov:(full|feed|link)\];?(?:\s+#[A-Za-z0-9_-]+)*\s*$/;
 
-// A '## ' heading the shared recogniser does not know is refused outright: the
-// old exclusion-list approach silently skipped whatever it did not match, so an
-// unrecognised heading took its bullets out of the gate's scope entirely.
-const unknown = unknownHeadings(md);
-if (unknown.length) {
-  console.error('check-provenance: unrecognised section heading(s): '
-    + unknown.map((h) => 'line ' + h.line + ' "## ' + h.text + '"').join(', '));
-  console.error('  Every "## " heading must be a contract section (Top stories, Global, China,'
-    + ' Watchlist, Market snapshot, Coverage note, Sources, in either language).');
+// Structure first: a heading this gate cannot map, a stray sub-heading or a
+// story-shaped bullet in a section that holds no stories used to slip through,
+// because whatever the exclusion list did not match was simply skipped.
+const structure = structureProblems(md);
+if (structure.length) {
+  console.error('check-provenance: the briefing does not match the output contract:');
+  for (const l of describeProblems(structure)) console.error('  ' + l);
+  console.error('  "## " headings must be contract sections (Top stories, Global, China,'
+    + ' Watchlist, Market snapshot, Coverage note, Sources, in either language);'
+    + ' aspects sit under Global and China; the Coverage note is paragraphs plus at most'
+    + ' one "### Additional notes / 补充说明"; and only Top stories, Global, China and'
+    + ' the Watchlist carry story lines.');
   process.exit(2);
 }
 

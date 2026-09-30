@@ -49,6 +49,13 @@ Deliver only the HTML. Keep the Markdown, the state and the run artifacts
     - BBC - https://...
     - 财新 - https://...
 
+A quiet aspect carries no stories. Its heading is followed by the marker, and
+nothing else: `(quiet - no significant news today)` under `## Global`,
+`(无重大新闻)` under `## China / 中国`. The marker is written in the section's own
+language. The renderer treats any paragraph opening with a bracket as the quiet
+block, so the marker is what marks it; a run has written
+`(quiet - 今日无重要新闻)`, which mixes the two languages and is not the form.
+
 ## Story line grammar
 
 Every story is exactly one Markdown list item:
@@ -188,8 +195,13 @@ equal the number of stories in the briefing when no story line is repeated.
   against `scripts/check-provenance.mjs`'s output before `update`: `.items.json`
   carries no provenance split, and the gate can only read a note that is already
   in the file. If the two disagree, correct the note and re-run `md-to-items`
-  and both gates - safe only while `update` has not run. Count story lines, not
-  distinct stories: a line printed twice -
+  and both gates - safe only while `update` has not run. Count them exactly as
+  `scripts/check-provenance.mjs` does, because its figure is the one the reader
+  can reproduce: every non-indented `- ` bullet in `## Top stories`, `## Global`,
+  `## China` and `## Watchlist` that carries a `[src:...]` reference or opens with a
+  bold headline. Bullets in the Market snapshot, the Coverage note and the
+  Sources are not story lines, and an indented bullet is never one. Count story
+  lines, not distinct stories: a line printed twice -
   a Top story that is also shown in its aspect - is counted twice, and a
   Watchlist entry is a story line for these counts even though it is an
   unresolved developing story. Repeating a story is the writer's choice, never a
@@ -205,19 +217,30 @@ equal the number of stories in the briefing when no story line is repeated.
 - the stale-data explanation - any market row whose as-of time is older than the
   run, and why.
 
-The two gates count different things: `scripts/check-diversity.mjs` counts only
-the `## Global` and `## China` story lines, so its per-section figures leave out
-the Top stories and the Watchlist, while `scripts/check-provenance.mjs` counts
-every story line - Top stories, both sections and the Watchlist - plus
-story-shaped bullets in the preamble and in sections it does not recognise, so
-in practice its figure is the larger of the two. Not always: provenance counts
-a line only when it starts with `- `, while diversity also matches an indented
-bullet, so an indented story line can make diversity exceed provenance. A Top
-story repeated in its aspect is counted twice by `check-provenance.mjs`, while
-`check-diversity.mjs` sees only the aspect copy, because it counts just the
-`## Global` and `## China` lines. The provenance counts
-above are story lines - the figure the coverage note follows - and so agree
-with `check-provenance.mjs`.
+The two gates count different things, and their figures are not interchangeable.
+`scripts/check-diversity.mjs` counts only the `## Global` and `## China` story
+lines, so its per-section figures leave out the Top stories and the Watchlist -
+it asks whether each section draws on more than one outlet, and a Top story is
+already counted under its aspect. `scripts/check-provenance.mjs` counts every
+story line - Top stories, both sections and the Watchlist - and its `story lines`
+figure is the one the coverage note follows and the one defined above. Both count
+a non-indented `- ` bullet only; neither counts a bullet in the Market snapshot,
+the Coverage note or the Sources. A Top story repeated in its aspect is two lines
+for `check-provenance.mjs` and one for `check-diversity.mjs`, which sees only the
+aspect copy.
+
+Both gates refuse a briefing whose structure they cannot account for, rather than
+skipping what they do not recognise: an unmapped `## ` heading, a `### ` outside
+Global and China, a Coverage-note sub-heading other than the one optional
+`### Additional notes / 补充说明`, or a story-shaped bullet in a section that holds
+no stories. Every one of those used to be possible to ship, and the first two
+used to take whole sections out of the gates' scope in silence.
+
+The note is paragraphs. Its one optional sub-heading is
+`### Additional notes / 补充说明`, at most one, after the fixed part, for notes
+that read better in Chinese; both gates refuse any other sub-heading there and
+refuse a story-shaped bullet anywhere in the note. A run used
+`### Additional notes / 补充说明` on 2026-09-30, which nothing policed before.
 
 The variable part is free: add anything else the run judges worth noting (a
 capped window, a licence gate that blocked a wire, two reports in conflict). Keep

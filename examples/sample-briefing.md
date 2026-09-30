@@ -6,12 +6,15 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 ## Top stories / 今日要闻
 - **[EXAMPLE] Central bank holds rates steady** - Policymakers left the benchmark rate unchanged and signalled patience. [src:EXAMPLE WIRE 2026-09-10 09:30](https://example.com/a) [alt:EXAMPLE NEWS](https://example.com/b) #new [prov:link]
 - **[EXAMPLE] Chip export rules tightened** - New licensing requirements target advanced packaging tools. [src:EXAMPLE NEWS 2026-09-10 07:10](https://example.com/b) [alt:EXAMPLE POST](https://example.com/c) #followup [prov:feed]
+- **[EXAMPLE] Port strike ends after a tentative deal** - Dockworkers and operators agreed a six-year contract, ending a three-day stoppage. [src:EXAMPLE WIRE 2026-09-10 10:05](https://example.com/j) [alt:EXAMPLE NEWS](https://example.com/b) #new [prov:full]
 
 ## Market snapshot / 市场快照
 | Market | Level | Chg | As of |
 |---|---|---|---|
 | S&P 500 | 7636.36 | -0.48% | 2026-09-10 04:03 |
 | 10Y China govt bond | 1.6927 | n/a | 2026-09-10 17:30 |
+
+(Values from the collector APIs, each row with its own as-of time in Asia/Shanghai. Yields are quoted in basis points: changeBp is the move in percentage points x 100.)
 
 ## Global
 ### Economy
@@ -24,6 +27,18 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 ### Tech
 - **[EXAMPLE] Regulator opens AI review** - A consultation on model transparency closed for comment. [src:EXAMPLE TECH 2026-09-10 05:40](https://example.com/f) #new [prov:full]
 
+### Business
+(quiet - no significant news today)
+
+### Foreign affairs
+(quiet - no significant news today)
+
+### Military
+(quiet - no significant news today)
+
+### Social
+(quiet - no significant news today)
+
 ## China / 中国
 ### 经济
 - **[示例] 制造业景气回升** - 最新数据显示制造业活动连续第二个月扩张。 [src:示例财经 2026-09-10 09:30](https://example.com/g) #new [prov:full]
@@ -31,6 +46,18 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 
 ### 时政
 - **[示例] 国务院部署稳就业举措** - 会议提出多项支持重点群体就业的措施。 [src:示例通讯社 2026-09-10 07:50](https://example.com/i) #new [prov:full]
+
+### 商业
+(无重大新闻)
+
+### 科技
+(无重大新闻)
+
+### 外交
+(无重大新闻)
+
+### 军事
+(无重大新闻)
 
 ### 社会
 (无重大新闻)
@@ -40,14 +67,20 @@ _Asia/Shanghai - generated 2026-09-10 17:30 - Last briefing 2026-09-05 - coverin
 
 ## Coverage note / 覆盖说明
 - Window: covering latest 72h (2026-09-07 17:00 -> 2026-09-10 17:00 Asia/Shanghai); the 48h before the window are not covered.
-- Provenance by story line: 3 full, 3 feed, 3 link - 9 story lines in all.
+- Provenance by story line: 4 full, 3 feed, 3 link - 10 story lines in all.
 - Fetch count: 24 distinct URL fetches, against a 20-30 target that stays guidance, not a gate.
-- Quiet aspects: Global Politics (quiet - no significant news today) and China 社会 (无重大新闻).
+- Quiet aspects: Global Politics, Business, Foreign affairs, Military and Social (quiet - no significant news today); China 商业, 科技, 外交, 军事 and 社会 (无重大新闻).
 - Market snapshot: no row is stale beyond its exchange's last published session - the 10Y China govt bond row carries the run's own as-of time of 2026-09-10 17:30, while the S&P 500 row carries 04:03, the previous US session's close, because the US cash market was still shut when the run collected.
 - Searched: Global major-powers aspects and mainland China aspects. Not searched: sport, celebrity, markets beyond the snapshot.
 - Provenance note: no story line here is a blocked wire with an unresolved canonical URL, so the [find:] search-badge case does not arise; an [alt:] link only marks a corroborating second report.
 
 ## Sources / 来源
 - EXAMPLE WIRE - https://example.com/a
+- EXAMPLE WIRE - https://example.com/d
+- EXAMPLE WIRE - https://example.com/j
 - EXAMPLE NEWS - https://example.com/b
+- EXAMPLE NEWS - https://example.com/e
+- EXAMPLE TECH - https://example.com/f
 - 示例财经 - https://example.com/g
+- 示例日报 - https://example.com/h
+- 示例通讯社 - https://example.com/i

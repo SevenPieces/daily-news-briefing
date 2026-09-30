@@ -98,13 +98,17 @@ A 402 is treated as final and is never retried, so a licensing gate costs one
 request, not eight.
 
 It prints JSON per URL: `url`, `ok`, `status`, `attempts`, `via`, `profile`,
-`title` with `titleSource` naming the markup it came from, `publishedAt`,
-`dateSource` with `dateOnly` true when that field carries no clock time,
-`charset`, `bytes`, `textLength`, plus
-`garbled` when the decoded text still carries replacement characters - and
+`title` with `titleSource` naming the markup it came from - `ogTitle`, `h1` and
+`h1s` (up to five headings in document order) are printed beside it, so a page
+whose first heading is navigation chrome is visible rather than silent -
+`publishedAt`, `dateSource` with `dateOnly` true when that field carries no
+clock time, `charset`, `bytes`, `textLength`, plus
+`garbled` when the decoded text still carries replacement characters,
+`textTruncated` when `--text` cut the excerpt, `dateRejected` for the date
+fields it saw and refused, and `maxBody` for the cap in effect - and
 `error` instead of the content fields when a URL could not be fetched. `--text`
 adds the stripped page text; `--out FILE` writes the JSON to a file. The top
-level also carries `rounds` and `profiles`. It exits 0 only when every URL was
+level also carries `rounds`, `profiles` and `maxBody`. It exits 0 only when every URL was
 fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
 
 - **Pass `--text` to read an article's body.** It is the flag that returns the

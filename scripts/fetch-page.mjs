@@ -389,7 +389,10 @@ function extractDate(html, metas) {
   push('meta:firstpublishedtime', (firstMeta(metas, { name: 'firstpublishedtime' }) || {}).content);
   push('meta:lastmodifiedtime', (firstMeta(metas, { name: 'lastmodifiedtime' }) || {}).content);
   push('meta:date', (firstMeta(metas, { name: 'date' }) || {}).content);
-  push('time[datetime]', (firstMeta(metas, {}) ? (/<time[^>]+datetime=["']([^"']+)["']/i.exec(html) || [])[1] : undefined));
+  // No precondition: a page can carry a <time datetime> with no <meta> at all,
+  // and gating this on "the page has some meta tag" silently dropped the only
+  // clock candidate such a page had.
+  push('time[datetime]', (/<time[^>]+datetime=["']([^"']+)["']/i.exec(html) || [])[1]);
   const dm = /"dateModified"\s*:\s*["']([^"']+)["']/.exec(html);
   push('dateModified', dm ? dm[1] : undefined);
 

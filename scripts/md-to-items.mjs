@@ -12,6 +12,7 @@
 
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { isStoryLine, sectionOf, unknownHeadings } from './lib/sections.mjs';
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -85,12 +86,6 @@ function parseStory(line) {
   return { title, outlet, primaryUrl: primary.url, flags };
 }
 
-// '## China / 中国' and '## Top stories / 今日要闻' carry the English name first;
-// only that half decides the mapping.
-function headingName(line) {
-  return line.slice(3).split('/')[0].trim();
-}
-
 function main() {
   const mdPath = process.argv[2];
   if (!mdPath || mdPath.startsWith('--')) {
@@ -116,17 +111,30 @@ function main() {
     process.exit(2);
   }
 
+  // A '## ' heading this parser cannot map used to drop every bullet under it
+  // silently - the whole China section vanished from the index when the heading
+  // was written in Chinese alone. Refuse the run instead of losing stories.
+  const unknown = unknownHeadings(md);
+  if (unknown.length) {
+    process.stderr.write('md-to-items: unrecognised section heading(s): '
+      + unknown.map((h) => 'line ' + h.line + ' "## ' + h.text + '"').join(', ') + '\n'
+      + '  Every "## " heading must be a contract section (Top stories, Global, China,'
+      + ' Watchlist, Market snapshot, Coverage note, Sources, in either language);'
+      + ' an unmapped heading would silently drop its stories from the index.\n');
+    process.exit(2);
+  }
+
   const items = [];
   let section = '';
   let aspect = '';
   for (const raw of md.split(/\r?\n/)) {
     const line = raw.replace(/\s+$/, '');
     if (line.startsWith('## ')) {
-      const name = headingName(line);
-      if (name === 'Top stories') { section = 'global'; aspect = 'top'; }
-      else if (name === 'Global') { section = 'global'; aspect = ''; }
-      else if (name === 'China') { section = 'china'; aspect = ''; }
-      else if (name === 'Watchlist') { section = 'watch'; aspect = 'watch'; }
+      const mapped = sectionOf(line.slice(3).trim());
+      if (mapped === 'top') { section = 'global'; aspect = 'top'; }
+      else if (mapped === 'global') { section = 'global'; aspect = ''; }
+      else if (mapped === 'china') { section = 'china'; aspect = ''; }
+      else if (mapped === 'watch') { section = 'watch'; aspect = 'watch'; }
       else { section = ''; aspect = ''; }
       continue;
     }
@@ -136,7 +144,7 @@ function main() {
       if ((section === 'global' || section === 'china') && aspect !== 'top') aspect = line.slice(4).trim();
       continue;
     }
-    if (!section || !line.startsWith('- ') || !line.includes('[src:')) continue;
+    if (!section || !isStoryLine(line) || !line.includes('[src:')) continue;
     const story = parseStory(line);
     if (!story.title) continue;
     items.push({

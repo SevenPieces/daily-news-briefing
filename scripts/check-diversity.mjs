@@ -3,15 +3,22 @@
 // A section whose primaries all come from one outlet fails.
 // Usage: node check-diversity.mjs <briefing.md>
 import { readFileSync } from 'node:fs';
+import { isStoryLine, sectionOf, sourceRef, unknownHeadings } from './lib/sections.mjs';
 
 const file = process.argv[2];
 if (!file) { console.error('usage: check-diversity.mjs <briefing.md>'); process.exit(2); }
 const md = readFileSync(file, 'utf8');
 
-function sectionKey(heading) {
-  if (/^Global/i.test(heading)) return 'global';
-  if (/^China/i.test(heading)) return 'china';
-  return null;
+// A heading this gate cannot map used to leave its whole section unchecked
+// while the gate still printed DIVERSITY: OK. Refuse it instead.
+const unknown = unknownHeadings(md);
+if (unknown.length) {
+  console.error('check-diversity: unrecognised section heading(s): '
+    + unknown.map((h) => 'line ' + h.line + ' "## ' + h.text + '"').join(', '));
+  console.error('  Every "## " heading must be a contract section (Top stories, Global, China,'
+    + ' Watchlist, Market snapshot, Coverage note, Sources, in either language);'
+    + ' an unmapped heading would leave its bullets unchecked.');
+  process.exit(2);
 }
 
 const stats = {
@@ -21,13 +28,20 @@ const stats = {
 let section = null, aspect = null;
 for (const line of md.split('\n')) {
   const h2 = /^##\s+(.*)$/.exec(line);
-  if (h2) { section = sectionKey(h2[1].trim()); aspect = null; continue; }
+  if (h2) {
+    // Top stories are a selection of stories that already appear in an aspect,
+    // so only the two section headings are counted here - counting the digest
+    // again would double every prominent story's weight.
+    const mapped = sectionOf(h2[1].trim());
+    section = (mapped === 'global' || mapped === 'china') ? mapped : null;
+    aspect = null;
+    continue;
+  }
   const h3 = /^###\s+(.*)$/.exec(line);
   if (h3) { aspect = h3[1].trim(); continue; }
-  if (!section || !/^\s*-\s+\*\*/.test(line)) continue;
-  const m = /\[src:(.+?)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.exec(line);
-  if (!m) continue;
-  const outlet = m[1].trim();
+  if (!section || !isStoryLine(line)) continue;
+  const outlet = sourceRef(line);
+  if (!outlet) continue;
   const s = stats[section];
   s.items++;
   s.outlets.set(outlet, (s.outlets.get(outlet) || 0) + 1);

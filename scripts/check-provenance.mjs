@@ -13,6 +13,7 @@
 // Exit: 0 OK, 1 a story line violates a gate rule, 2 usage or unreadable file.
 
 import { readFileSync } from 'node:fs';
+import { STORY_SECTIONS, isStoryLine, sectionOf, unknownHeadings } from './lib/sections.mjs';
 
 const file = process.argv[2];
 if (!file) { console.error('usage: check-provenance.mjs <briefing.md>'); process.exit(2); }
@@ -30,9 +31,17 @@ const ANY_MARKER = /\[prov:(full|feed|link)\]/g;      // count every marker, to 
 // the end of the line, so trailing tags after the marker are accepted.
 const ENDS_WITH = /\[prov:(full|feed|link)\];?(?:\s+#[A-Za-z0-9_-]+)*\s*$/;
 
-// Sections whose bullets are not stories. Listed as exclusions rather than an
-// allowlist so a future section is policed by default, not silently skipped.
-const NON_STORY_SECTION = /^(Sources|Coverage note|Market snapshot)/i;
+// A '## ' heading the shared recogniser does not know is refused outright: the
+// old exclusion-list approach silently skipped whatever it did not match, so an
+// unrecognised heading took its bullets out of the gate's scope entirely.
+const unknown = unknownHeadings(md);
+if (unknown.length) {
+  console.error('check-provenance: unrecognised section heading(s): '
+    + unknown.map((h) => 'line ' + h.line + ' "## ' + h.text + '"').join(', '));
+  console.error('  Every "## " heading must be a contract section (Top stories, Global, China,'
+    + ' Watchlist, Market snapshot, Coverage note, Sources, in either language).');
+  process.exit(2);
+}
 
 const counts = { full: 0, feed: 0, link: 0 };
 const missing = [];
@@ -40,17 +49,18 @@ const unsourced = [];
 const misplaced = [];
 const duplicated = [];
 let items = 0;
-let section = 'preamble';
+let section = 'preamble';      // the raw heading text, for messages
+let sectionKey = null;         // the mapped section, or null outside a story section
 
 md.split('\n').forEach((line, i) => {
   const h2 = /^##\s+(.*)$/.exec(line);
-  if (h2) { section = h2[1].trim(); return; }
-  if (NON_STORY_SECTION.test(section)) return;
+  if (h2) { section = h2[1].trim(); sectionKey = sectionOf(section); return; }
+  if (!sectionKey || !STORY_SECTIONS.has(sectionKey)) return;
 
-  // Mirror render-html.mjs: a story is a non-indented "- " bullet that carries
-  // a [src: ...] reference or opens with a bold headline.
-  if (!line.startsWith('- ')) return;
-  if (!line.includes('[src:') && !/^-\s+\*\*/.test(line)) return;
+  // A story is a non-indented "- " bullet carrying a [src: ...] reference or
+  // opening with a bold headline, exactly as scripts/lib/sections.mjs defines
+  // it and as md-to-items.mjs and check-diversity.mjs now use it too.
+  if (!isStoryLine(line)) return;
 
   items++;
   const where = { line: i + 1, section, preview: line.slice(0, 72) };

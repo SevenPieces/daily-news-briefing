@@ -235,10 +235,14 @@ canonical URL as an `[alt:AP](url)` (or `[alt:Reuters](url)`) link; use it as
 the src tagged #unverified only when no fetchable primary corroborates the
 story. Google News item links never resolve to the publisher, so never cite them.
 
-Before giving up on a blocked wire URL, try one archive read:
-`https://web.archive.org/web/2/<url>` (or the availability API
-`https://archive.org/wayback/available?url=<url>`). If a snapshot exists, verify
-the story from it and still cite the original publisher URL.
+Before giving up on a blocked wire URL, try one archive read. This is best
+effort and often unavailable: both transports are routinely refused. On
+2026-09-30 `https://web.archive.org/web/2/<url>` answered 403 on all four header
+profiles and `https://archive.org/wayback/available?url=<url>` answered 429 on the
+same day. A refusal is not evidence that no snapshot exists, and an unavailable
+archive is never a reason to drop the story - fall through to the steps below.
+When a snapshot is readable, verify the story from it and still cite the original
+publisher URL.
 Same-day stories usually have no snapshot yet. If no canonical URL can be found
 at all, add a clearly-labelled search fallback instead of omitting the story:
 `[find:AP](https://www.google.com/search?q=<headline>+site:apnews.com)`.
@@ -311,7 +315,8 @@ is refused even with `--force`, because the baseline would move backwards.
 
 Present the HTML file, and summarize the same content in chat (never only a
 link). Keep the Markdown, the state JSON and the run artifacts `.markets.json`,
-`.feeds.json` and `.items.json` in `$OUT`, but deliver only the HTML. Then
+`.feeds.json`, `.items.json` and `.fetch-ledger.json` in `$OUT`, but deliver only
+the HTML. Then
 delete the run's staging directory, so every research scratch file goes with it
 and the next run starts from an empty path - the second line removes the
 `.staging` parent once it is empty:

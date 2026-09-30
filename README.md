@@ -92,6 +92,8 @@ scripts/fetch-feeds.mjs        publisher RSS feeds plus discovery-only items
 scripts/md-to-items.mjs        Markdown -> the item index update stores
 scripts/render-html.mjs        Markdown -> self-contained HTML
 scripts/update-state.mjs       computes the window, records the run
+scripts/check-research.mjs     fails a research report before the briefing is written
+scripts/lib/sections.mjs       the shared section and story-line grammar every parser imports
 tests/                         the node --test harness (needs Node 20.11+)
 examples/                      an illustrative sample briefing
 ```

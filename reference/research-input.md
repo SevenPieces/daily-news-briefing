@@ -16,6 +16,7 @@ before writing; this file sits between them.
       "section": "global",
       "aspect": "Economy",
       "headline": "Publisher's headline, word for word",
+      "sourceTitle": "Raw title the fetch printed, before entity decoding",
       "outlet": "BBC",
       "primaryUrl": "https://...",
       "publishedAt": "2026-09-28 09:30",
@@ -25,6 +26,7 @@ before writing; this file sits between them.
       "flags": ["new"],
       "corroboratingOutlet": "SCMP",
       "altUrl": "https://...",
+      "altTitle": "The alternate page's own title",
       "keyFacts": ["...", "..."],
       "gateNote": "..."
     }
@@ -34,14 +36,15 @@ before writing; this file sits between them.
 | section | yes | global or china |
 | aspect | yes | the aspect heading verbatim: Economy ... Social for Global, 经济 ... 社会 for China; top for a Top story |
 | headline | yes | the publisher's own headline, **verbatim**; never reworded, translated or summarized; `fetch-page.mjs` prints the raw HTML title, so decode HTML entities (for example `&#039;` and `&#x27;`) before publishing - the headline must be the publisher's rendered headline, not its escaped source text |
+| sourceTitle | yes | the title the tool printed, verbatim and **before any entity decoding**: for a fetched page, `fetch-page.mjs`'s `title` field (with `titleSource` naming the markup it came from); for a publisher-feed record, the feed item's own title; for a headline-and-link record, the wire's own headline as it was seen. It is the evidence the headline is checked against - `scripts/check-research.mjs` compares `headline` with `decodeEntities(sourceTitle)` and refuses a headline that differs, allowing only a trailing outlet name after a separator (a page's `<title>` routinely appends one) |
 | outlet | yes | the outlet that published the cited page, not a republisher |
 | primaryUrl | yes | the canonical primary link |
 | publishedAt | yes | publication time in Asia/Shanghai, YYYY-MM-DD HH:MM; for a reused URL, the in-window update time; the tool prints the page's own string, so normalise it: an explicit offset is converted to Asia/Shanghai and the seconds dropped (`2026-09-29T17:30:10+08:00` -> `2026-09-29 17:30`); a bare `YYYY-MM-DD HH:MM:SS` with no zone is read as Asia/Shanghai and truncated the same way (`2026-09-29 11:14:25` -> `2026-09-29 11:14`), never shifted by a guessed offset; when the page states another zone, convert from it; a page whose every available field is date-only carries no clock time and cannot supply `publishedAt` on its own - take the time from another dated source, the publisher feed's `pubDate` when it is in-window or a dated page element that does carry a time, and name the field you read; if no dated source carries a time, reject the item as `dateRejected` and record the date-only value in the gate note; never invent `00:00` or any other clock time |
-| dateSource | yes | the exact `dateSource` string the fetch printed, copied character for character; the tool's names are examples, not a closed set - `datePublished`, `article:published_time`, `itemprop:datePublished`, `meta:pubdate`, `meta:publishdate`, `time[datetime]`, `dateModified` - and a publisher-feed item records the feed's own field name (`pubDate`); a page read with `web_fetch` or another tool that prints no `dateSource` records that tool's name (`web_fetch`); `fetch-page.mjs` printing `dateSource: null` means the page carried no date field it recognised - record `null`, never a field name the tool did not print, and source `publishedAt` elsewhere (the publisher feed's `pubDate`, or a dated page element read and named as such); no other dated source means `dateRejected`. A date-only field carries no clock time: it cannot supply a mandatory `publishedAt`, so the publishedAt row's rule decides such an item. Chinese state and central publishers (news.cn, cnr.cn) print a date-only `meta:publishdate`, and the same rule decides their records - the date is evidence, the clock must come from a dated element that carries one. When the value is neither `datePublished` nor `dateModified`, the reused-URL check below cannot lean on the label alone: look at the page itself before admitting or rejecting the item |
+| dateSource | yes | the exact `dateSource` string the fetch printed, copied character for character; `fetch-page.mjs`'s labels are a closed set - `datePublished`, `dateModified`, `article:published_time`, `itemprop:datePublished`, `meta:date-published`, `meta:publishdate`, `meta:firstpublishedtime`, `meta:lastmodifiedtime`, `meta:date`, `time[datetime]`, `body:text`, and `null` for no recognised date field - and a publisher-feed item records the feed's own field name (`pubDate`); a page read with `web_fetch` or another tool that prints no `dateSource` records that tool's name (`web_fetch`); `fetch-page.mjs` printing `dateSource: null` means the page carried no date field it recognised - record `null`, never a field name the tool did not print, and source `publishedAt` elsewhere (the publisher feed's `pubDate`, or a dated page element read and named as such); no other dated source means `dateRejected`. A date-only field carries no clock time: it cannot supply a mandatory `publishedAt`, so the publishedAt row's rule decides such an item. Chinese state and central publishers (news.cn, cnr.cn) print a date-only `meta:publishdate`, and the same rule decides their records - the date is evidence, the clock must come from a dated element that carries one. When the value is neither `datePublished` nor `dateModified`, the reused-URL check below cannot lean on the label alone: look at the page itself before admitting or rejecting the item |
 | provenance | yes | full, feed or link - where the summary's words came from: the article body, the publisher feed's own description, or the headline and link alone; a fetched page with no article body is link unless the summary is taken from the publisher's own feed description, which is feed; it is never full |
 | textLength | yes | the evidence for the provenance call it is attached to, exactly as counted, never rounded - the length of the text the call rests on, not of the fetch: `scripts/fetch-page.mjs` returned `ok:true` and the summary came from the page body - the `textLength` it printed, the full stripped length whether or not `--text` truncated the excerpt; returned `ok:false` (too small, non-HTML, blocked) - 0, with its `error` in `gateNote`; returned `ok:true` but the excerpt is chrome only with no publisher feed describing the story, so the item is recorded a link - 0, because the call rests on the headline and link rather than on the chrome, with the printed `textLength` reported in `gateNote` as the body-less fetch evidence; the page was read with `web_fetch` or another tool - the character length of the text obtained; a publisher RSS record, with the summary from the feed's own description - the character length of that description, never the printed `textLength` of a fetch that returned no body the summary used; a headline-and-link wire item, neither fetched nor described by a feed - 0. A printed `textLength` that measures no body the summary came from does not become this field's value: report it in `gateNote` as the body-less fetch evidence |
 | flags | yes | new, followup, developing, paywalled, unverified; classification against the state index is the agent's call (see `reference/output-contract.md`) |
-| corroboratingOutlet | when one exists | a second credible outlet reporting the same event, never the outlet already cited as `[src:]`, and its page's own title must confirm that event (record that title beside the URL); it becomes the `[alt:]` link |
+| corroboratingOutlet | when one exists | a second credible outlet reporting the same event, never the outlet already cited as `[src:]`, and its page's own title must confirm that event (record that title in `altTitle`); it becomes the `[alt:]` link |
 | altUrl | when one exists | that outlet's canonical URL |
 | keyFacts | yes | the facts the summary will be written from, 1-2 sentences in the section language; for a paywalled or feed item, quote only the publisher's own title and description |
 | gateNote | when the gate fired | what happened to this item: a non-200 fetch, a body-less 200, a rejected date, a page-versus-RSS conflict |
@@ -92,15 +95,59 @@ coverage note can say so honestly:
   reconciled against it rather than an agent's memory. The deterministic
   collectors - the feed URLs in `.feeds.json` and the market instruments in
   `.markets.json` - are not part of it.
-- **Archive attempts** - every blocked wire URL probed with the archive
-  availability API, and what each answered, so Step 4b's archive rule leaves a
-  trace.
+  The coverage note counts URLs, one per URL, however many HTTP requests the
+  retries cost (see `reference/output-contract.md`), and one URL can cost up to
+  8 requests (2 header profiles x 2 transports x 2 rounds - `reference/sources.md`).
+  The ledger carries that cost so the two reconcile. Its per-agent lists hold one
+  entry per URL that agent fetched, and each entry records the attempts behind
+  it; `requests` totals every entry:
+
+      {
+        "generatedAt": "2026-09-30T00:37:17.805Z",
+        "briefingDate": "2026-09-30",
+        "distinctUrlsFetched": 24,
+        "requests": 33,
+        "orchestrator": [ { "url": "https://...", "attempts": 12 },
+                          { "url": "https://...", "attempts": 1 } ],
+        "globalAgent":  [ { "url": "https://...", "attempts": 1 } ],
+        "chinaAgent":   [ { "url": "https://...", "attempts": 4 } ]
+      }
+
+  `attempts` is what `fetch-page.mjs` printed for that URL, or the requests the
+  agent made for it when the probe failed; a deterministic collector's poll is
+  never an entry. `distinctUrlsFetched` is the union across the lists - a URL two
+  agents both fetched is one distinct URL - while `requests` sums every entry, so
+  an overlap counts its requests twice, as the run really spent them. The live
+  2026-09-30 ledger recorded 24 distinct URLs, one of which cost 12 requests; the
+  ledger keys around these fields (`window`, `target`, `allowanceBreakdown`,
+  `failures`, `unionNote`, `gates`, `blockedWireResolutions`) are unchanged.
+- **Archive attempts** - every blocked wire URL probed for a snapshot and what
+  each probe answered, so Step 4b's archive rule leaves a trace. Either probe
+  counts: the `https://web.archive.org/web/2/<url>` read or the
+  `https://archive.org/wayback/available?url=<url>` API, with the HTTP status it
+  answered, the date, and which fall-through was taken (`[alt:AP](url)`, then
+  `[find:AP](search)`). A refusal is a result, not a finding that no snapshot
+  exists, and a failed read never drops the story.
 
 ## Where it lives
 
 Records and notes are working material. When written to disk they belong under the
 run's staging directory (`$OUT/.staging/<YYYY-MM-DD>/`), which the run deletes
-before it finishes. Nothing here is a deliverable and nothing here goes into the
-state: the state is fed by `.items.json`, which `scripts/md-to-items.mjs` derives
-from the finished briefing Markdown. Never cite a record that no fetch or
-publisher feed backs.
+before it finishes. The records go there as `records.json`, a JSON array in
+report order, so they can be checked before the briefing that would carry their
+errors is written:
+
+~~~sh
+node "$SKILL/scripts/check-research.mjs" "$STAGE/records.json" --window "<SINCE>" "<UNTIL>"
+~~~
+
+It prints one line per problem, naming the record index and the field, and exits
+0 clean, 1 on a violation, 2 on a usage error or unreadable input. Two findings
+are warnings that print without failing the run: an aspect whose records all come
+from one outlet, and a `dateSource` that is neither `datePublished` nor
+`dateModified`. Its checks and the record shape it expects are documented in its
+own header.
+
+Nothing here is a deliverable and nothing here goes into the state: the state is
+fed by `.items.json`, which `scripts/md-to-items.mjs` derives from the finished
+briefing Markdown. Never cite a record that no fetch or publisher feed backs.

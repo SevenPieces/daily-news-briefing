@@ -25,7 +25,7 @@ content) and may be cited as the primary link.
 | The Paper | thepaper.cn | China, Social | |
 | CLS | cls.cn | China, Economy | fast wire |
 | STCN | stcn.com | China, Business | |
-| 光明网 (Guangming) | gmw.cn, politics.gmw.cn, m.gmw.cn | China | curl 200; homepage is a live dated index; article pages carry a full timestamp; no RSS (probe 2026-09-18) |
+| 光明网 (Guangming) | gmw.cn, politics.gmw.cn, m.gmw.cn | China | curl 200; homepage is a live dated index; no RSS; article pages answer 200 (re-probe 2026-09-30: 32294 bytes, textLength 5555) and their own `meta:publishdate` is date-only, so the clock time has to come from the body - `fetch-page.mjs` reads the body's dated stamp and prints `dateSource: body:text` with `publishedAt: "2026-09-18 11:15"` (the body carries `2026-09-18 11:15`), which is the only clock time the page offers |
 | 香港政府新闻网 (HK Government News) | news.gov.hk | China (Hong Kong) | curl 200; static dated article pages are the primary; no fetchable RSS and no static dated index - discover via web_search (probe 2026-09-18) |
 | 中华人民共和国国防部 (MND) | mod.gov.cn | China, Military | **http only** - the https form fails to connect (`status 0`), so always fetch `http://`; article pages answer 200 with a date-only `meta:publishdate`, so `publishedAt` must come from a dated element; the registry's primary for the 军事 aspect (probe 2026-09-30) |
 
@@ -98,7 +98,9 @@ A 402 is treated as final and is never retried, so a licensing gate costs one
 request, not eight.
 
 It prints JSON per URL: `url`, `ok`, `status`, `attempts`, `via`, `profile`,
-`title`, `publishedAt`, `dateSource`, `charset`, `bytes`, `textLength`, plus
+`title` with `titleSource` naming the markup it came from, `publishedAt`,
+`dateSource` with `dateOnly` true when that field carries no clock time,
+`charset`, `bytes`, `textLength`, plus
 `garbled` when the decoded text still carries replacement characters - and
 `error` instead of the content fields when a URL could not be fetched. `--text`
 adds the stripped page text; `--out FILE` writes the JSON to a file. The top
@@ -118,12 +120,13 @@ fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
   move an item across the coverage window. A modification time alone is not a
   publication time - see "Reused URLs" below for when a modified page is still
   in-window. `dateSource` is whatever label the tool printed, copied character
-  for character - `datePublished`, `article:published_time`,
-  `itemprop:datePublished`, `meta:pubdate`, `meta:publishdate`,
-  `time[datetime]`, `dateModified` - so the names are examples, not a closed set.
-  When it is
-  neither `datePublished` nor `dateModified`, the label alone cannot settle
-  an in-window update: the reused-URL check needs its own look at the page.
+  for character, and the set is closed: `datePublished`, `dateModified`,
+  `article:published_time`, `itemprop:datePublished`, `meta:date-published`,
+  `meta:publishdate`, `meta:firstpublishedtime`, `meta:lastmodifiedtime`,
+  `meta:date`, `time[datetime]`, `body:text`, or `null` for a page that carried
+  no recognised date field. When the label is neither `datePublished` nor
+  `dateModified`, the label alone cannot settle an in-window update: the
+  reused-URL check needs its own look at the page.
 - `web_fetch` remains a valid fallback when the script cannot reach a page.
 - `[prov:full]` means the cited page's own article body was obtained; a publisher
   RSS abstract is `[prov:feed]`. Neither is second-class - the marker states depth
@@ -180,9 +183,15 @@ Resolve the canonical publisher URL with a site-restricted search - for example
 `<exact headline> site:apnews.com` - which returns `apnews.com/article/...`
 links even though the page itself is 403. Verified for AP. Google News item links
 never resolve to the publisher (they stay on news.google.com), so never cite them.
-For an older wire story, one archive read may verify it:
-`https://web.archive.org/web/2/<url>` (same-day stories are usually not archived).
-If no canonical URL exists, cite a `[find:AP](google-search-url)` search fallback.
+An archive read is best effort only, for an older wire story, and is often
+unavailable: `https://web.archive.org/web/2/<url>` answered 403 on all four
+profiles and `https://archive.org/wayback/available?url=<url>` answered 429 when
+probed on 2026-09-30, and same-day stories are usually not archived. A refusal is
+not evidence that no snapshot exists, and no snapshot is promised. When the read
+fails - or finds nothing - fall through to the canonical publisher URL as an
+`[alt:AP](url)` link, and to a
+`[find:AP](https://www.google.com/search?q=<headline>+site:apnews.com)` search
+fallback when no canonical URL can be found either.
 
 **Sky News is a third shape.** Its article pages return a hard 403 from an
 Akamai edge block to plain curl, browser-header curl and the harness fetch
@@ -238,6 +247,24 @@ shape:
 
 `discoveryOnly` is keyed off the link, so a redirect row is never cited as a
 primary even when its outlet looks like a publisher.
+
+The top level also carries one `feeds` record per configured or `--feeds` URL, so
+a run that lost a source can be audited after the fact:
+
+| Field | Meaning |
+|---|---|
+| url | the feed URL as configured, or as passed to `--feeds` |
+| outlet, section | the feed's configuration; empty for a one-off `--feeds` URL |
+| status | `ok` when the feed was fetched and items were parsed, `error` otherwise |
+| count | items parsed from that feed (0 on error) |
+| error | the failure message - `no items parsed`, or `HTTP <status> <statusText> for <url>` - empty on success |
+
+A non-2xx response is an error, not content: the status goes in `error` and the
+body is never parsed as a feed. A feed that is not UTF-8 is decoded as gb18030
+before latin1, so a GBK feed does not arrive as mojibake. When every feed in
+`feeds` is an error, the collector writes one
+`fetch-feeds: all N feeds failed; itemCount M` line to stderr and exits 1; a
+partial success exits 0 and leaves the audit to the `feeds` records.
 
 The collector's `aspect` values are its own coarse section slugs, set per feed
 or per discovery query - `foreign`, `economy`, `politics`, `tech`,

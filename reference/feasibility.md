@@ -1,7 +1,8 @@
 # Feasibility notes and probe evidence
 
 Recorded 2026-09-10; the hard-block, UA-sensitive and licensing rows were
-re-probed 2026-09-25. Re-run the probes below before changing the source tiers.
+re-probed 2026-09-25, and the 光明网 article row was re-probed 2026-09-30. Re-run
+the probes below before changing the source tiers.
 
 ## Environment
 
@@ -106,7 +107,7 @@ probe time, without a proxy.
 | Target | Result |
 |---|---|
 | gmw.cn homepage | 200, 151 KB; a live dated index - 12 distinct in-window article links (`2026-09/18/content_*.htm`) on the page |
-| gmw.cn article (`politics.gmw.cn/2026-09/18/content_39007773.htm`) | 200; title plus full timestamp (2026-09-18 11:15); about 5.7 KB of body text |
+| gmw.cn article (`politics.gmw.cn/2026-09/18/content_39007773.htm`) | 200 (re-probe 2026-09-30: 32294 bytes, textLength 5555, first attempt). Its own `meta:publishdate` is date-only; the clock time is in the body, and `fetch-page.mjs` printed `dateSource: "body:text"`, `publishedAt: "2026-09-18 11:15"`, `dateOnly: false`. The 2026-09-18 probe's "full timestamp" was that body stamp, not a date field |
 | gmw.cn mobile (`m.gmw.cn`) | 200; same article set, lighter markup |
 | gmw.cn RSS (`gmw.cn/rss/`, `gmw.cn/rss/rss.htm`) | 404 - no feed; use the HTML index |
 | news.gov.hk article (`chi/2026/09/20260917/20260917_120804_911.html`) | 200; static page carrying title, date and full body |

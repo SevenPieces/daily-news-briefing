@@ -90,7 +90,10 @@ function message(err) {
 
 function curlJson(url, ms) {
   const seconds = String(Math.max(5, Math.ceil(ms / 1000)));
-  const out = execFileSync('curl', ['-sS', '-m', seconds, '-H', 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) daily-news-briefing', url], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+  // -f so an HTTP error is reported as one. Without it curl exits 0 on a 404
+  // and hands the error body to JSON.parse, so a delisted symbol surfaced as
+  // "no price in response" instead of "HTTP 404".
+  const out = execFileSync('curl', ['-sS', '-f', '-m', seconds, '-H', 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) daily-news-briefing', url], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
   return JSON.parse(out);
 }
 
@@ -184,10 +187,22 @@ async function main() {
   const out = arg('--out', '');
   const selected = arg('--instruments', '').split(',').map((s) => s.trim()).filter(Boolean);
   const ids = selected.length ? selected : Object.keys(YAHOO).concat(Object.keys(EASTMONEY));
+  // An unknown id used to vanish: zero rows and exit 0, indistinguishable from
+  // a market that simply had no quotes. Name every id that matched nothing.
+  const unknown = ids.filter((id) => !YAHOO[id] && !EASTMONEY[id]);
+  if (unknown.length) {
+    process.stderr.write('collect-markets: unknown instrument id' + (unknown.length === 1 ? '' : 's') + ': ' + unknown.join(', ') + '\n');
+  }
   const tasks = [];
   for (const id of ids) {
     if (YAHOO[id]) tasks.push(fromYahoo(id, YAHOO[id], ms));
     else if (EASTMONEY[id]) tasks.push(fromEastmoney(id, EASTMONEY[id], ms));
+  }
+  // Nothing usable was asked for: a usage error, and no output file to mistake
+  // for a successful empty run.
+  if (!tasks.length) {
+    process.stderr.write('collect-markets: no known instrument requested; nothing to collect\n');
+    process.exit(2);
   }
   const instruments = await Promise.all(tasks);
   const payload = {

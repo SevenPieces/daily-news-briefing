@@ -123,16 +123,30 @@ function splitItems(xml) {
   return xml.split('<entry>').slice(1).map((part) => part.split('</entry>')[0]);
 }
 
-// Chinese feeds are commonly GBK; prefer UTF-8 when it looks like XML.
+// Chinese feeds are commonly GBK/GB18030, and the XML prolog is ASCII, so
+// "looks like XML" cannot tell a UTF-8 feed from a GBK one. The reliable signal
+// is U+FFFD: a UTF-8 decode emits it for every byte it cannot map. Re-decode
+// those as gb18030, and keep latin1 as the last resort for a single-byte feed.
 function decodeBuffer(buf) {
   const asUtf8 = buf.toString('utf8');
-  if (asUtf8.includes('<?xml') || asUtf8.includes('<rss') || asUtf8.includes('<feed')) return asUtf8;
+  if (!asUtf8.includes('\uFFFD')) return asUtf8;
+  const asGb18030 = new TextDecoder('gb18030').decode(buf);
+  if (!asGb18030.includes('\uFFFD')) return asGb18030;
   return buf.toString('latin1');
+}
+
+// Tagged so fetchText never retries an authoritative HTTP status with curl.
+function httpError(status, statusText, url) {
+  const err = new Error('HTTP ' + status + (statusText ? ' ' + statusText : '') + ' for ' + url);
+  err.httpStatus = status;
+  return err;
 }
 
 function curlBuffer(url, ms) {
   const seconds = String(Math.max(5, Math.ceil(ms / 1000)));
-  return execFileSync('curl', ['-sS', '-m', seconds, '-L', '-H', 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) daily-news-briefing', url], { maxBuffer: 16 * 1024 * 1024 });
+  // -f so a 4xx/5xx is an error on this transport too: when fetch is
+  // unavailable curl is the only transport, and its body is not a feed.
+  return execFileSync('curl', ['-sS', '-f', '-m', seconds, '-L', '-H', 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) daily-news-briefing', url], { maxBuffer: 16 * 1024 * 1024 });
 }
 
 async function fetchText(url, ms) {
@@ -145,11 +159,15 @@ async function fetchText(url, ms) {
         redirect: 'follow',
         headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) daily-news-briefing' },
       });
+      // A 404/500 body is not a feed. The status is authoritative, so it must
+      // not reach the parser, nor be retried through curl as content.
+      if (!res.ok) throw httpError(res.status, res.statusText, url);
       return decodeBuffer(Buffer.from(await res.arrayBuffer()));
     } finally {
       clearTimeout(timer);
     }
   } catch (err) {
+    if (err && err.httpStatus) throw err;
     return decodeBuffer(curlBuffer(url, ms));
   }
 }
@@ -228,10 +246,15 @@ async function main() {
     });
   }
 
+  // Whitespace-insensitive, but a title alone is not a story identity: two
+  // different stories can carry one headline, and a space-free CJK headline is
+  // a single token that ASCII-space normalisation never really compared. Key on
+  // the title with every whitespace run stripped PLUS the link, so the same
+  // story still collapses while two different links can never merge.
   const seen = new Set();
   const deduped = [];
   for (const it of items) {
-    const key = it.title.toLowerCase().split(' ').filter(Boolean).join(' ');
+    const key = it.title.toLowerCase().replace(/\s+/g, '') + '\u0000' + (it.link || '');
     if (seen.has(key)) continue;
     seen.add(key);
     deduped.push(it);
@@ -247,6 +270,15 @@ async function main() {
   const text = JSON.stringify(payload, null, 2);
   if (out) writeFileSync(out, text + '\n');
   else process.stdout.write(text + '\n');
+
+  // Every feed failing is an outage, not a quiet news day: an empty result with
+  // nothing on stderr used to be indistinguishable from a slow-news run. The
+  // records above still say which feeds failed; a partial success stays exit 0.
+  const failed = feedRecords.filter((r) => r.status !== 'ok').length;
+  if (feedRecords.length > 0 && failed === feedRecords.length) {
+    process.stderr.write('fetch-feeds: all ' + failed + ' feeds failed; itemCount ' + deduped.length + '\n');
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

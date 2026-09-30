@@ -189,8 +189,9 @@ links even though the page itself is 403. Verified for AP. Google News item link
 never resolve to the publisher (they stay on news.google.com), so never cite them.
 An archive read is best effort only, for an older wire story, and is often
 unavailable: `https://web.archive.org/web/2/<url>` answered 403 on all four
-profiles and `https://archive.org/wayback/available?url=<url>` answered 429 when
-probed on 2026-09-30, and same-day stories are usually not archived. A refusal is
+attempts (2 header profiles x 2 transports) and
+`https://archive.org/wayback/available?url=<url>` answered 429 when probed on
+2026-09-30, and same-day stories are usually not archived. A refusal is
 not evidence that no snapshot exists, and no snapshot is promised. When the read
 fails - or finds nothing - fall through to the canonical publisher URL as an
 `[alt:AP](url)` link, and to a

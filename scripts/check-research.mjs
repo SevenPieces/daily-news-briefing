@@ -70,6 +70,18 @@ const DATE_SOURCES = new Set([
   'dateModified',
 ]);
 
+// reference/research-input.md allows two sources that are not fetch-page labels:
+// a record whose dated source is the publisher's own RSS item records the field
+// the collector read, and a page read with another tool records that tool's
+// name. Checking only DATE_SOURCES refused every feed-derived record - and the
+// publisher feeds are primaries, so that is most of a normal run.
+const FEED_DATE_SOURCES = new Set(['pubDate', 'published', 'updated', 'dc:date', 'date', 'publishedAt']);
+const TOOL_DATE_SOURCES = new Set(['web_fetch']);
+
+function knownDateSource(value) {
+  return DATE_SOURCES.has(value) || FEED_DATE_SOURCES.has(value) || TOOL_DATE_SOURCES.has(value);
+}
+
 // The two labels that ARE a publication or modification time. A record whose
 // dateSource is neither cannot lean on the label for the reused-URL check, so
 // it warns - and it may not carry an invented 00:00 clock time either.
@@ -227,8 +239,9 @@ function recordProblems(rec, window) {
   if (has('dateSource')) {
     if (rec.dateSource !== null && typeof rec.dateSource !== 'string') {
       add('dateSource', 'not a field name or null: ' + JSON.stringify(rec.dateSource));
-    } else if (typeof rec.dateSource === 'string' && !DATE_SOURCES.has(rec.dateSource)) {
-      add('dateSource', '"' + rec.dateSource + '" is not a label fetch-page.mjs prints');
+    } else if (typeof rec.dateSource === 'string' && !knownDateSource(rec.dateSource)) {
+      add('dateSource', '"' + rec.dateSource + '" is not a label fetch-page.mjs prints, a field the feed'
+        + ' collector reads (pubDate, published, updated, dc:date, date), or the name of another tool (web_fetch)');
     }
   } else {
     add('dateSource', 'missing - record the printed label, or null when there is none');

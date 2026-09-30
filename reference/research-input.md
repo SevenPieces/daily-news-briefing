@@ -33,8 +33,8 @@ before writing; this file sits between them.
 
 | Field | Required | Meaning |
 |---|---|---|
-| section | yes | global or china |
-| aspect | yes | the aspect heading verbatim: Economy ... Social for Global, 经济 ... 社会 for China; top for a Top story |
+| section | yes | global, china, or watch for a Watchlist entry |
+| aspect | yes | the aspect heading verbatim: Economy ... Social for Global, 经济 ... 社会 for China; top for a Top story; watch for a Watchlist entry |
 | headline | yes | the publisher's own headline, **verbatim**; never reworded, translated or summarized; `fetch-page.mjs` entity-decodes the title it reports and names the markup it came from in `titleSource`, so copy its `title` as it stands; the rendered headings are printed beside it - `h1` for the first and `h1s` for up to five in document order - so a page whose first heading is navigation chrome is visible rather than silent, and a chrome-only heading is never the headline |
 | sourceTitle | yes | the title the tool printed, verbatim and **before any entity decoding**: for a fetched page, `fetch-page.mjs`'s `title` field (with `titleSource` naming the markup it came from); for a publisher-feed record, the feed item's own title; for a headline-and-link record, the wire's own headline as it was seen. It is the evidence the headline is checked against - `scripts/check-research.mjs` compares `headline` with `decodeEntities(sourceTitle)` and refuses a headline that differs, allowing only a trailing outlet name after a separator (a page's `<title>` routinely appends one) |
 | outlet | yes | the outlet that published the cited page, not a republisher |

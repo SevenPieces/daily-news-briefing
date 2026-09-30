@@ -23,7 +23,7 @@ trace to a real source. Nothing is invented, estimated, or padded.
 | Global scope | Major powers: US, EU/UK, Russia and Eastern Europe, China-world relations, Japan and the Koreas, Middle East, international institutions |
 | China scope | Mainland national, plus Hong Kong, Taiwan and Macau, and city-level stories when they are genuinely worth noting |
 | Volume | 20-25 distinct stories total; a Top story repeated in its section is one story but two story lines; allocated by importance; empty aspects are omitted |
-| Budget | 20-30 article-page fetches for the run, about 3-5 minutes |
+| Budget | 20-30 article-page fetches for a full run, about 3-5 minutes; that band is guidance for a 20-25-story run, and a deliberately smaller run legitimately makes fewer |
 
 ## 2. Coverage window (never ask)
 
@@ -344,9 +344,15 @@ second Step 6 pass has no planned window left - the first pass consumed it - so
 when no usable record exists and the window it would close is under ten minutes
 (600s), `update` refuses and says the state was already closed minutes ago,
 because accepting it would move the baseline to a moment no `plan` announced.
-Editing the Markdown after Step 6 therefore means re-running `plan` (Step 2), not
-just the `md-to-items` and `update` pair; the index dedupes by date and title, so
-even a forced re-run cannot append the same entries twice. `--force` excuses only
+Editing the Markdown **before** `update` has run is just the `md-to-items` and
+gates pass again. Editing it **after** `update` has run is not a re-`plan` away:
+`plan` measures from the new baseline, which is the moment that update closed, so
+the window it computes is minutes wide and excludes everything the run just
+researched - a verification run on 2026-09-30 followed the old advice and got a
+six-minute window, which failed `check-research` on every record. Restore the
+state to the pre-update baseline (the run's own Step-1 seed) and replay Step 2
+through Step 6, so the window is the one the briefing covers; the index dedupes by
+date and title, so replaying cannot append the same entries twice. `--force` excuses only
 a short but positive window: a window whose end sits behind the recorded baseline
 is refused even with `--force`, because the baseline would move backwards.
 

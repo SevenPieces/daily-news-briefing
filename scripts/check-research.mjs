@@ -19,7 +19,7 @@
 // check runs only when both ends are known.
 //
 // A record is the per-story record of reference/research-input.md:
-//   section        global | china
+//   section        global | china | watch
 //   aspect         Economy ... Social (Global), 经济 ... 社会 (China), or top
 //   headline       the publisher's own headline, verbatim
 //   sourceTitle    the title the fetch (or the feed item) printed, verbatim and
@@ -58,7 +58,12 @@ const ALLOWED_TAGS = new Set(['new', 'followup', 'developing', 'paywalled', 'unv
 
 const GLOBAL_ASPECTS = new Set(['Economy', 'Politics', 'Business', 'Tech', 'Foreign affairs', 'Military', 'Social']);
 const CHINA_ASPECTS = new Set(['经济', '时政', '商业', '科技', '外交', '军事', '社会']);
-const SECTION_ASPECTS = { global: GLOBAL_ASPECTS, china: CHINA_ASPECTS };
+// A Watchlist entry is a story line the contract requires and the provenance
+// gate counts, but it has its own section: without this a run had no schema-legal
+// way to record one and filed it under global/Economy, where it also joined that
+// aspect's single-outlet warning.
+const WATCH_ASPECTS = new Set(['watch']);
+const SECTION_ASPECTS = { global: GLOBAL_ASPECTS, china: CHINA_ASPECTS, watch: WATCH_ASPECTS };
 
 // The labels scripts/fetch-page.mjs's extractDate() can emit, exactly - keep in
 // step with that function. null is the documented "no recognised date field"
@@ -214,7 +219,7 @@ function recordProblems(rec, window) {
   else if (!Array.isArray(rec.keyFacts) || !rec.keyFacts.length) add('keyFacts', 'empty - no facts for the summary');
 
   if (has('section') && isFilled(rec.section) && !SECTION_ASPECTS[rec.section]) {
-    add('section', 'not global or china: ' + JSON.stringify(rec.section));
+    add('section', 'not global, china or watch: ' + JSON.stringify(rec.section));
   }
   if (has('aspect') && isFilled(rec.aspect) && rec.aspect !== 'top' && SECTION_ASPECTS[rec.section]) {
     if (!SECTION_ASPECTS[rec.section].has(rec.aspect)) {

@@ -29,6 +29,14 @@ content) and may be cited as the primary link.
 | 香港政府新闻网 (HK Government News) | news.gov.hk | China (Hong Kong) | curl 200; static dated article pages are the primary; no fetchable RSS and no static dated index - discover via web_search (probe 2026-09-18) |
 | 中华人民共和国国防部 (MND) | mod.gov.cn | China, Military | **http only** - the https form fails to connect (`status 0`), so always fetch `http://`; article pages answer 200 with a date-only `meta:publishdate`, so `publishedAt` must come from a dated element; the registry's primary for the 军事 aspect (probe 2026-09-30) |
 
+**One outlet, one label.** `check-diversity.mjs` compares the `[src:]` label as a
+raw string, so cite each publisher under the single form the registry gives it,
+not the variant the page happens to show. The Chinese state publishers are the
+clear case: news.cn is cited as `新华网` whether the page's own source line reads
+新华网 or 新华社, and the wire's English name (Xinhua) is not a third outlet - three
+spellings of one publisher would count as three outlets and hide a section that
+really does rest on one.
+
 ## Publisher RSS primaries (dated, citable)
 
 These outlets' article pages are bot-blocked, but their **own RSS feeds** are
@@ -101,8 +109,11 @@ It prints JSON per URL: `url`, `ok`, `status`, `attempts`, `via`, `profile`,
 `title` with `titleSource` naming the markup it came from - `ogTitle`, `h1` and
 `h1s` (up to five headings in document order) are printed beside it, so a page
 whose first heading is navigation chrome is visible rather than silent -
-`publishedAt`, `dateSource` with `dateOnly` true when that field carries no
-clock time, `charset`, `bytes`, `textLength`, plus
+`publishedAt` - the page's own string, with any explicit zone kept
+intact (`2026-09-30T05:00:05.479Z` stays a UTC stamp, so convert it to
+Asia/Shanghai as `reference/research-input.md` requires; a value with no zone is
+the page's own local time) - `dateSource` with `dateOnly` true when that field
+carries no clock time, `charset`, `bytes`, `textLength`, plus
 `garbled` when the decoded text still carries replacement characters,
 `textTruncated` when `--text` cut the excerpt, `dateRejected` for the date
 fields it saw and refused, and `maxBody` for the cap in effect - and

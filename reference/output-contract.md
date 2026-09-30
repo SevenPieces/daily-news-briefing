@@ -137,6 +137,13 @@ that returned only masthead and navigation. The marker names where the summary's
 words came from; it never means an HTTP request succeeded. Keep exactly three
 markers - never invent a fourth.
 
+`[prov:full]` rests on the text `--text` returned, and that excerpt is capped at
+1500 characters while `textLength` reports the full stripped length: "the page's
+own article body was obtained" means the body was reached and read as far as the
+cap, not that every word of it was read. A summary drawn from inside the excerpt
+is still `[prov:full]`; a summary that needs the part beyond it is not, because
+those words did not come from the cited page's own body as read.
+
 The renderer makes every **headline a link** to its primary source and adds a
 "原文 / Original ↗" link to any item tagged #paywalled or #unverified. Never
 paraphrase locked body text: for #paywalled items use only the publisher's own

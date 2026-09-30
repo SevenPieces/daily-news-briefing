@@ -15,14 +15,29 @@ estimated, or padded.
 | `briefing-YYYY-MM-DD.html` | The deliverable: self-contained, dark theme, collapsible aspects, print styles, source badges and a working search box |
 | `briefing-YYYY-MM-DD.md` | The editable source of the same briefing |
 | `briefing-state.json` | The coverage baseline and a seven-day index of recent stories; the agent classifies `#new` / `#followup` against it |
+| `.fetch-ledger.json` | Run artifact: every article-page URL the run fetched, with the per-agent split and the union |
 
 Outputs go to `./briefings` under the working directory, or to `$BRIEFING_DIR`
 when that is set.
 
+Only the HTML is a deliverable. The agent's own writes - the Markdown and
+`.fetch-ledger.json` - land at mode `0600`; the script-written artifacts
+(`.markets.json`, `.feeds.json`, `.items.json`), `briefing-state.json` and the
+HTML follow the process umask (`0664` under a `0002` umask, `0644` under the
+common `0022`), so one run's files can differ in mode. The state and the run
+artifacts are local state, never deliverables: ship the HTML and keep the rest
+on disk.
+
 ## Requirements
 
-- **Node.js 18 or newer.** Every script uses only the standard library, so there
-  is nothing to install.
+- **Node.js 18 or newer** for the scripts; **Node 20.11 or newer** to run the
+  test harness, because `tests/helpers.mjs` uses `import.meta.dirname`, which
+  Node 18 does not provide. Every script uses only the Node standard library, so
+  there is nothing to install.
+- **The `curl` binary on `PATH`.** `fetch-page.mjs`, `fetch-feeds.mjs` and
+  `collect-markets.mjs` shell out to it as their fallback transport, because some
+  publishers answer a browser profile and reject Node's own `fetch`. It is a
+  binary, not a package: no `npm install` provides it.
 - A skill-capable agent harness (DeepSeek Harness, Claude Code, ...) with web
   search and fetch available.
 - Network access. Market data comes from keyless public APIs - no API keys and
@@ -38,6 +53,11 @@ git clone <repo-url> ~/.dsh/skills/daily-news-briefing
 # Claude Code
 git clone <repo-url> ~/.claude/skills/daily-news-briefing
 ```
+
+The skill root is `$SKILL` when set, otherwise
+`${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing`; set `$SKILL` to run a
+candidate revision from a checkout that is not the install. Outputs follow
+`$BRIEFING_DIR` as above.
 
 ## Usage
 
@@ -72,6 +92,7 @@ scripts/fetch-feeds.mjs        publisher RSS feeds plus discovery-only items
 scripts/md-to-items.mjs        Markdown -> the item index update stores
 scripts/render-html.mjs        Markdown -> self-contained HTML
 scripts/update-state.mjs       computes the window, records the run
+tests/                         the node --test harness (needs Node 20.11+)
 examples/                      an illustrative sample briefing
 ```
 
@@ -106,15 +127,18 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 
 The two gates count different things: `check-diversity.mjs` counts only the
 `Global` and `China` section lines, while `check-provenance.mjs` counts every
-story line - Top stories, both sections and the Watchlist - so the two item
-counts differ for the same briefing.
+story line - Top stories, both sections and the Watchlist, never a bullet in the
+Market snapshot, the Coverage note or the Sources and never an indented one - so
+the two item counts differ for the same briefing.
 
 ## Sourcing rules
 
 - Two source tiers: fetch-verified primaries (BBC, SCMP, The Guardian, Al
   Jazeera, Nikkei Asia, Xinhua, gov.cn, NBS, PBoC, Caixin, Yicai, The Paper, CLS,
-  STCN) and blocked originals (Reuters, AP, FT, Bloomberg, WSJ return 401/403 to
-  automated fetch).
+  STCN, Guangming Online (gmw.cn) and Hong Kong Government News (news.gov.hk))
+  and blocked originals (Reuters, AP, FT, Bloomberg, WSJ return 401/403 to
+  automated fetch). `reference/sources.md` carries the full registry and its
+  probe evidence - it is the list of record, this line is a summary.
 - Every item needs a primary link and an in-window publication timestamp.
   Aggregator-only items are dropped; Google News, Baidu News and Weibo hot search
   are discovery surfaces, never the cited primary.

@@ -10,9 +10,10 @@
 | .markets.json | run artifact: the market collector's rows, kept in the output directory |
 | .feeds.json | run artifact: the feed collector's output, kept in the output directory |
 | .items.json | run artifact: the parsed item index, written by md-to-items.mjs, kept in the output directory |
+| .fetch-ledger.json | run artifact: every article-page URL the run fetched, with the per-agent split and the union, written by the agent (reference/research-input.md), kept in the output directory |
 
 Deliver only the HTML. Keep the Markdown, the state and the run artifacts
-(`.markets.json`, `.feeds.json`, `.items.json`) on disk.
+(`.markets.json`, `.feeds.json`, `.items.json`, `.fetch-ledger.json`) on disk.
 
 ## Markdown structure
 
@@ -191,17 +192,24 @@ equal the number of stories in the briefing when no story line is repeated.
   window is a string, not a sentence: the note may state it inside a sentence of
   its own if the string itself is unchanged;
 - the item provenance counts - how many story lines came from each of full,
-  feed and link. Count them from the Markdown you just wrote and confirm them
-  against `scripts/check-provenance.mjs`'s output before `update`: `.items.json`
-  carries no provenance split, and the gate can only read a note that is already
-  in the file. If the two disagree, correct the note and re-run `md-to-items`
-  and both gates - safe only while `update` has not run. Count them exactly as
-  `scripts/check-provenance.mjs` does, because its figure is the one the reader
-  can reproduce: every non-indented `- ` bullet in `## Top stories`, `## Global`,
-  `## China` and `## Watchlist` that carries a `[src:...]` reference or opens with a
-  bold headline. Bullets in the Market snapshot, the Coverage note and the
-  Sources are not story lines, and an indented bullet is never one. Count story
-  lines, not distinct stories: a line printed twice -
+  feed and link. Run `scripts/check-provenance.mjs`, read its own first line
+  (`story lines: N | full: F | feed: E | link: L`) and copy the three marker
+  figures into the note. Never count them by grepping the file for `[prov:...]`:
+  the Coverage note's own prose quotes the marker, so a text search over-counts.
+  On 2026-09-30 the note wrote "a paywalled [prov:feed] line" and a grep returned
+  18 full / 7 feed / 1 link against the gate's 18 full / 6 feed / 1 link; on
+  2026-09-29 the note wrote "verified ([prov:full])" and a grep returned
+  25 / 0 / 0 against the gate's 24 / 0 / 0. The surplus is the note's own words,
+  not a story. Confirm the gate's figures before `update`: `.items.json` carries
+  no provenance split, and the gate can only read a note that is already in the
+  file. If the note and the gate disagree, correct the note and re-run
+  `md-to-items` and both gates - safe only while `update` has not run. The gate's
+  figure is the one the reader can reproduce, because it counts as this contract
+  defines a story line: every non-indented `- ` bullet in `## Top stories`,
+  `## Global`, `## China` and `## Watchlist` that carries a `[src:...]` reference
+  or opens with a bold headline. Bullets in the Market snapshot, the Coverage note
+  and the Sources are not story lines, and an indented bullet is never one. Count
+  story lines, not distinct stories: a line printed twice -
   a Top story that is also shown in its aspect - is counted twice, and a
   Watchlist entry is a story line for these counts even though it is an
   unresolved developing story. Repeating a story is the writer's choice, never a

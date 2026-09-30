@@ -117,7 +117,7 @@ Four reads come before any work, each before the step it governs:
 ~~~sh
 if [ -n "$BRIEFING_DIR" ]; then OUT="$BRIEFING_DIR"; else OUT="$PWD/briefings"; fi
 mkdir -p "$OUT"
-STAGE="$OUT/.staging/$(TZ=Asia/Shanghai date +%F)"
+STAGE="${OUT:?}/.staging/$(TZ=Asia/Shanghai date +%F)"
 mkdir -p "$STAGE"
 SKILL="${SKILL:-${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing}"
 DATE=$(TZ=Asia/Shanghai date +%F)
@@ -126,17 +126,28 @@ DATE=$(TZ=Asia/Shanghai date +%F)
 These variables live only in the shell that ran this block: each step usually runs
 in a fresh shell, so a later step must re-establish the same values - `OUT=...;
 STAGE=...; SKILL=...; DATE=...` - in its own shell before it uses `$OUT`,
-`$STAGE`, `$SKILL` or `$DATE`. `STAGE` and `DATE` carry `$(TZ=Asia/Shanghai date
+`$STAGE`, `$SKILL` or `$DATE`. `STAGE` is built from `OUT`, so a shell that
+re-establishes `STAGE` must re-establish `OUT` first: the `${OUT:?}` in that
+assignment refuses an unset or empty `OUT` instead of silently building
+`/.staging/<date>`. `STAGE` and `DATE` carry `$(TZ=Asia/Shanghai date
 +%F)`, so a run that spans Shanghai midnight must reuse the values its first
 execution captured rather than recompute them at 00:05: a new `DATE` would
 retarget the briefing filename (Step 6), and a new `STAGE` would aim Step 7's
 delete at a directory the run never used, leaving the real scratch behind. The
 date is fixed for the whole run.
 
+The staging path is keyed by date alone, so only one run at a time may use a
+given output directory: two runs sharing one `$OUT` on the same Shanghai day
+share `$STAGE`, and Step 7's delete takes the other run's research scratch with
+it. This run-at-a-time rule is chosen over a per-run unique path because every
+shell of the run must re-derive the same `$STAGE` from `$OUT` and `$DATE`, and a
+unique component such as a PID or a timestamp would change in each fresh shell,
+leaving Step 7 aimed at a directory the run never used.
+
 All research scratch - subagent output, feed dumps, fetched pages - lives under
 `$STAGE`, and the run deletes that directory before it finishes (Step 7). The
-run's own artifacts - `.markets.json`, `.feeds.json`, `.items.json` - stay in
-`$OUT`; staging holds nothing the run keeps.
+run's own artifacts - `.markets.json`, `.feeds.json`, `.items.json`,
+`.fetch-ledger.json` - stay in `$OUT`; staging holds nothing the run keeps.
 
 ### Step 2 - Compute the window
 
@@ -192,19 +203,29 @@ whose summary needs the body must be read with `--text`, but a truncated
 excerpt is not evidence of a body: when all 1500 characters are pure site
 chrome - masthead, navigation, cookie notice - no body was obtained, so record
 `[prov:feed]` or `[prov:link]`, never `[prov:full]`, and write the summary
-from the feed's description or the headline alone. It never
-retries a 402: that is a licensing answer, not a transient failure. Cover
-both sections across all seven aspects, respecting the budget, and capture every
-candidate in the research-report schema in `reference/research-input.md`. That
-schema is mandatory; the subagent fan-out is not. The 20-30 fetch target is a
+from the feed's description or the headline alone. It never retries a 402:
+that is a licensing answer, not a transient failure. A discovery hit is never a
+citation until a fetch confirms it: web_search can return punycode IDN hosts
+(`xn--...`), which must be resolved to the publisher's real host before citing
+because the punycode host's TLS certificate does not match, so that page cannot
+be fetched; and it can return 404 links for valid-looking articles (observed on
+Xinhua), so a title and link alone prove nothing. Cover both sections across all
+seven aspects, respecting the budget, and capture every candidate in the
+research-report schema in `reference/research-input.md`. That schema is
+mandatory; the subagent fan-out is not. Validate the report with
+`node "$SKILL/scripts/check-research.mjs" <report-path>` before any Markdown is
+written: it exits 0 when the report satisfies the schema, 1 on violations and 2
+on usage or an unreadable report. The 20-30 fetch target is a
 run-level budget for article-page fetches, not a per-agent one: the ledger is
 the union of every agent's fetches plus the orchestrator's own. Overlap between
 agents is only discovered after the fact, so budget the SUM of the allowances
 you hand out - that sum, not the hoped-for union, is what a budget can promise.
-A failed probe counts: it was a fetch the run made. A search-derived China
-section commonly reaches the top of that band or passes it, and the overrun is
-disclosed in the coverage note, never hidden or re-counted. Each item must end
-with a
+`--retries` counts ROUNDS, not requests: each round is 2 header profiles x 2
+transports, so the default of 2 rounds is up to 8 requests per URL - while the
+ledger counts a URL once, not its requests. A failed probe counts: it was a fetch
+the run made. A search-derived China section commonly reaches the top of that
+band or passes it, and the overrun is disclosed in the coverage note, never
+hidden or re-counted. Each item must end with a
 dated primary: a page whose own article body was obtained, a publisher's
 own RSS item, or - for blocked wire copy - a corroborating primary with the
 wire as an alt. A page that answered 200 but yielded no article body is
@@ -236,11 +257,13 @@ the src tagged #unverified only when no fetchable primary corroborates the
 story. Google News item links never resolve to the publisher, so never cite them.
 
 Before giving up on a blocked wire URL, try one archive read. This is best
-effort and often unavailable: both transports are routinely refused. On
-2026-09-30 `https://web.archive.org/web/2/<url>` answered 403 on all four header
-profiles and `https://archive.org/wayback/available?url=<url>` answered 429 on the
-same day. A refusal is not evidence that no snapshot exists, and an unavailable
-archive is never a reason to drop the story - fall through to the steps below.
+effort and often unavailable: both header profiles and both transports are
+routinely refused. On
+2026-09-30 `https://web.archive.org/web/2/<url>` answered 403 on all four
+attempts (2 header profiles x 2 transports) and
+`https://archive.org/wayback/available?url=<url>` answered 429 on the same day.
+A refusal is not evidence that no snapshot exists, and an unavailable archive
+is never a reason to drop the story - fall through to the steps below.
 When a snapshot is readable, verify the story from it and still cite the original
 publisher URL.
 Same-day stories usually have no snapshot yet. If no canonical URL can be found
@@ -317,13 +340,14 @@ Present the HTML file, and summarize the same content in chat (never only a
 link). Keep the Markdown, the state JSON and the run artifacts `.markets.json`,
 `.feeds.json`, `.items.json` and `.fetch-ledger.json` in `$OUT`, but deliver only
 the HTML. Then
-delete the run's staging directory, so every research scratch file goes with it
-and the next run starts from an empty path - the second line removes the
+delete the run's staging directory - the run's own, under Step 1's
+one-run-at-a-time rule for a shared `$OUT` - so every research scratch file goes
+with it and the next run starts from an empty path - the second line removes the
 `.staging` parent once it is empty:
 
 ~~~sh
 rm -rf "${STAGE:?}"
-rmdir "$OUT/.staging" 2>/dev/null || true
+rmdir "${OUT:?}/.staging" 2>/dev/null || true
 ~~~
 
 ## 5. Output contract
@@ -336,6 +360,11 @@ aspect sections, Watchlist, Coverage note and Sources. Each story is one line:
 
 Tags: #new, #followup, #developing, #paywalled, #unverified. Global content is
 English; China content is Chinese. Structural labels are bilingual.
+
+A quiet aspect carries no stories: its heading is followed by the marker and
+nothing else, written in the section's own language - `(quiet - no significant
+news today)` under Global, `(无重大新闻)` under China - never a mixed form such
+as `(quiet - 今日无重要新闻)`.
 
 ## 6. Quality gate
 
@@ -378,7 +407,8 @@ English; China content is Chinese. Structural labels are bilingual.
   never disagree about the window.
 - The coverage note states how many article-page fetches the run made, so an
   overrun of the 20-30 target is visible; the target stays guidance, not a gate.
-- Quiet aspects are noted; nothing is padded to hit the item count.
+- Quiet aspects are noted with the canonical marker in the section's own
+  language (see section 5); nothing is padded to hit the item count.
 - The HTML is self-contained: header and content flow as one page with no
   separate sticky bar, plus collapsible aspects, dark theme, print styles,
   source badges and a working search box.

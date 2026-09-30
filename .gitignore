@@ -13,8 +13,9 @@ Desktop.ini
 .env
 .env.*
 
-# Dependencies - these scripts use only the Node standard library,
-# so this only guards against a stray install
+# Dependencies - the scripts use only the Node standard library (the curl binary
+# is an external fallback transport, not a package), so this only guards against
+# a stray install
 node_modules/
 
 # Run artifacts. The skill writes these to $BRIEFING_DIR (default ./briefings),
@@ -23,6 +24,7 @@ briefing-state.json
 .items.json
 .markets.json
 .feeds.json
+.fetch-ledger.json
 .staging/
 briefing-*.md
 briefing-*.html

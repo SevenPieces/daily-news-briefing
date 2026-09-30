@@ -10,10 +10,12 @@
 // index unnoticed.
 //
 // Usage: node check-provenance.mjs <briefing.md>
-// Exit: 0 OK, 1 a story line violates a gate rule, 2 usage or unreadable file.
+// Exit: 0 OK; 1 a story line violates a gate rule; 2 usage, an unreadable file,
+// or a briefing whose section grammar this gate cannot account for (a refusal
+// to evaluate, distinct from a briefing that violates a rule).
 
 import { readFileSync } from 'node:fs';
-import { STORY_SECTIONS, describeProblems, isStoryLine, sectionOf, structureProblems } from './lib/sections.mjs';
+import { STORY_SECTIONS, describeProblems, hasSourceRef, isStoryLine, looksLikeStory, sectionOf, structureProblems } from './lib/sections.mjs';
 
 const file = process.argv[2];
 if (!file) { console.error('usage: check-provenance.mjs <briefing.md>'); process.exit(2); }
@@ -51,6 +53,7 @@ const missing = [];
 const unsourced = [];
 const misplaced = [];
 const duplicated = [];
+const malformed = [];   // bullet meant as a story but not in the contract's shape
 let items = 0;
 let section = 'preamble';      // the raw heading text, for messages
 let sectionKey = null;         // the mapped section, or null outside a story section
@@ -60,17 +63,18 @@ md.split('\n').forEach((line, i) => {
   if (h2) { section = h2[1].trim(); sectionKey = sectionOf(section); return; }
   if (!sectionKey || !STORY_SECTIONS.has(sectionKey)) return;
 
-  // A story is a non-indented "- " bullet carrying a [src: ...] reference or
-  // opening with a bold headline, exactly as scripts/lib/sections.mjs defines
-  // it and as md-to-items.mjs and check-diversity.mjs now use it too.
-  if (!isStoryLine(line)) return;
+  // A bullet that is meant to be a story but is not in the contract's shape
+  // (no bold headline) is reported, never skipped: skipping is what let a
+  // garbage "headline" into the state index and let check-diversity print OK.
+  if (!looksLikeStory(line)) return;
+  const where = { line: i + 1, section, preview: line.slice(0, 72) };
+  if (!isStoryLine(line)) { malformed.push(where); return; }
 
   items++;
-  const where = { line: i + 1, section, preview: line.slice(0, 72) };
   // md-to-items.mjs indexes only lines carrying a [src:] reference, so a story
   // line without one would pass this gate and then vanish from the state index.
   // Report it here instead of letting the loss stay silent.
-  if (!line.includes('[src:')) { unsourced.push(where); return; }
+  if (!hasSourceRef(line)) { unsourced.push(where); return; }
   const found = [...line.matchAll(ANY_MARKER)].map((m) => m[1]);
   if (found.length === 0) missing.push(where);
   else if (found.length > 1) duplicated.push(Object.assign({ markers: found.join(', ') }, where));
@@ -78,16 +82,22 @@ md.split('\n').forEach((line, i) => {
   else counts[found[0]]++;
 });
 
-const problems = missing.length + unsourced.length + misplaced.length + duplicated.length;
+const problems = missing.length + unsourced.length + misplaced.length + duplicated.length + malformed.length;
 // The printed buckets partition the total: every counted line lands in exactly
 // one of the three markers or one of the four failure lists, and a zero bucket
 // is omitted, so the numbers always add up.
 console.log('story lines: ' + items + ' | full: ' + counts.full
   + ' | feed: ' + counts.feed + ' | link: ' + counts.link
+  + (malformed.length ? ' | malformed: ' + malformed.length : '')
   + (unsourced.length ? ' | unsourced: ' + unsourced.length : '')
   + (missing.length ? ' | unmarked: ' + missing.length : '')
   + (misplaced.length ? ' | misplaced: ' + misplaced.length : '')
   + (duplicated.length ? ' | duplicated: ' + duplicated.length : ''));
+if (malformed.length) {
+  console.log('  FAIL: ' + malformed.length + ' bullet(s) are meant as stories but do not open with a bold headline');
+  for (const m of malformed.slice(0, 10)) console.log('    line ' + m.line + '  (' + m.section + ')  ' + m.preview);
+  if (malformed.length > 10) console.log('    ... and ' + (malformed.length - 10) + ' more');
+}
 if (unsourced.length) {
   console.log('  FAIL: ' + unsourced.length + ' story item(s) carry no [src:...] source reference');
   for (const u of unsourced.slice(0, 10)) console.log('    line ' + u.line + '  (' + u.section + ')  ' + u.preview);

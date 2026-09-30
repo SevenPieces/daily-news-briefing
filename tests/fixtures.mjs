@@ -88,7 +88,7 @@ export function briefing(o = {}) {
   lines.push(o.quietLine ?? 'Quiet aspects: none.');
   if (o.coverageSubheading) {
     lines.push('### Additional notes / 补充说明');
-    lines.push('- **A bullet that is not a story line** - it carries no source reference.');
+    lines.push('- A note bullet, not a story line: it carries no source reference and no bold headline.');
   }
   for (const l of o.extraStoryLines ?? []) lines.push(l);
   lines.push('');

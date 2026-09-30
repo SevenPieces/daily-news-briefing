@@ -4,6 +4,7 @@
 // Inline CSS and JS only; the result opens correctly from file:// offline.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { STORY_SECTIONS, isStoryLine, sectionOf } from './lib/sections.mjs';
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -18,6 +19,16 @@ function esc(text) {
     .replaceAll('"', '&quot;');
 }
 
+// Only an http(s) URL may become an href. esc() escapes the text but says
+// nothing about the scheme, so a javascript: or data: URL arriving from a
+// publisher feed's <link>, or pasted from a poisoned search result, would
+// otherwise be emitted as executable script inside the delivered file:// page.
+// An empty result means "not a link": the caller renders the text instead.
+function safeUrl(url) {
+  const u = String(url || '').trim();
+  return /^https?:\/\//i.test(u) ? u : '';
+}
+
 function linkify(text) {
   let out = '';
   let rest = String(text);
@@ -28,7 +39,10 @@ function linkify(text) {
     let j = i;
     while (j < rest.length && rest[j] !== ' ' && rest[j] !== '<' && rest[j] !== ')') j++;
     const url = rest.slice(i, j);
-    out += '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a>';
+    const safe = safeUrl(url);
+    out += safe
+      ? '<a href="' + esc(safe) + '" target="_blank" rel="noopener">' + esc(url) + '</a>'
+      : esc(url);
     rest = rest.slice(j);
   }
   return out;
@@ -110,23 +124,25 @@ function renderStory(line, index, aspectToken, counts) {
   const story = parseStory(line);
   counts[aspectToken] = (counts[aspectToken] || 0) + 1;
   const primary = story.refs.find((r) => r.kind === 'src' && r.url);
+  const primaryUrl = primary ? safeUrl(primary.url) : '';
   const prov = story.provenance && PROV[story.provenance]
     ? '<span class="prov ' + PROV[story.provenance][0] + '" title="' + esc(PROV[story.provenance][1]) + '"></span>'
     : '';
-  const headline = primary
-    ? '<a class="hl" href="' + esc(primary.url) + '" target="_blank" rel="noopener">' + esc(story.headline) + '</a>'
+  const headline = primaryUrl
+    ? '<a class="hl" href="' + esc(primaryUrl) + '" target="_blank" rel="noopener">' + esc(story.headline) + '</a>'
     : '<span class="hl">' + esc(story.headline) + '</span>';
   const badges = [];
   for (const ref of story.refs) {
     const cls = ref.kind === 'src' ? 'badge src' : ref.kind === 'find' ? 'badge find' : 'badge alt';
     const text = ref.kind === 'find' ? '\ud83d\udd0d ' + (ref.label || 'search') : (ref.label || (ref.kind === 'src' ? 'source' : 'also'));
-    if (ref.url) badges.push('<a class="' + cls + '" href="' + esc(ref.url) + '" target="_blank" rel="noopener">' + esc(text) + '</a>');
+    const refUrl = safeUrl(ref.url);
+    if (refUrl) badges.push('<a class="' + cls + '" href="' + esc(refUrl) + '" target="_blank" rel="noopener">' + esc(text) + '</a>');
     else badges.push('<span class="' + cls + '">' + esc(text) + '</span>');
   }
   const tagHtml = story.tags.map((t) => '<span class="tag t-' + esc(t) + '">' + esc(t) + '</span>').join('');
   const needsOriginal = story.tags.includes('paywalled') || story.tags.includes('unverified');
-  const original = needsOriginal && primary
-    ? '<a class="orig" href="' + esc(primary.url) + '" target="_blank" rel="noopener">原文 / Original \u2197</a>'
+  const original = needsOriginal && primaryUrl
+    ? '<a class="orig" href="' + esc(primaryUrl) + '" target="_blank" rel="noopener">原文 / Original \u2197</a>'
     : '';
   const summary = story.summary ? '<p class="sum">' + esc(story.summary) + '</p>' : '';
   return '<li class="story" id="it-' + index + '"><div class="hlrow">' + prov + headline + '</div>' + summary + '<div class="badges">' + badges.join('') + tagHtml + original + '</div></li>';
@@ -159,7 +175,13 @@ if (!mdPath) {
   process.exit(1);
 }
 const outPath = arg('--out', mdPath.replace(/\.md$/, '') + '.html');
-const md = readFileSync(mdPath, 'utf8');
+let md;
+try {
+  md = readFileSync(mdPath, 'utf8');
+} catch (err) {
+  console.error('render-html: cannot read ' + mdPath + ': ' + String((err && err.message) || err));
+  process.exit(2);
+}
 const lines = md.split('\n');
 
 let title = 'Daily Briefing';
@@ -219,7 +241,7 @@ for (const raw of lines) {
     const id = 's' + secIndex;
     topics.push({ level: 2, id, name });
     html.push('<section class="sec" id="' + id + '"><h2>' + esc(name) + '</h2>'
-      + (NON_STORY_SECTION.test(name) ? '' : PROV_KEY));
+      + (STORY_SECTIONS.has(sectionOf(name)) ? PROV_KEY : ''));
     openSection = true;
     continue;
   }
@@ -245,7 +267,10 @@ for (const raw of lines) {
 
   if (line.startsWith('- ')) {
     flushTable(); flushPlain();
-    const isStory = !NON_STORY_SECTION.test(currentSection) && (line.includes('[src:') || line.trim().startsWith('- **'));
+    // The same predicate the two gates and md-to-items use, so the three
+    // cannot drift: a story line opens with a bold headline, and only the four
+    // story sections carry stories.
+    const isStory = STORY_SECTIONS.has(sectionOf(currentSection)) && isStoryLine(line);
     if (isStory) {
       if (!inList) { html.push('<ul class="stories">'); inList = true; }
       storyIndex++;

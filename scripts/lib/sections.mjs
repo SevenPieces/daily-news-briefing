@@ -50,13 +50,28 @@ export function sectionOf(heading) {
 }
 
 /**
- * A story line, exactly as the output contract defines one: a NON-indented
- * '- ' bullet carrying a [src: ...] reference or opening with a bold headline.
+ * "This bullet is meant to be a story": a NON-indented '- ' bullet that either
+ * opens with a bold headline or carries a real [src:...](url) reference.
  * Indented bullets are sub-notes, never stories.
+ *
+ * This is deliberately wider than the contract's grammar, so that a bullet that
+ * is neither - a story line written without its bold headline, or one whose src
+ * has no timestamp - can be REPORTED as malformed instead of being skipped.
+ * Skipping was the original defect: check-diversity counted nothing and still
+ * printed OK.
+ */
+export function looksLikeStory(line) {
+  if (!line.startsWith('- ')) return false;
+  return /^-\s+\*\*/.test(line) || hasSourceRef(line);
+}
+
+/**
+ * The contract's story line: '- **Headline** - Summary. [src:...]'. The bold
+ * headline is mandatory - a bullet that only happens to contain a [src:] link
+ * is not a story, and indexing it as one put a garbage title in the state index.
  */
 export function isStoryLine(line) {
-  if (!line.startsWith('- ')) return false;
-  return line.includes('[src:') || /^-\s+\*\*/.test(line);
+  return /^- \*\*.+?\*\*/.test(line);
 }
 
 /**
@@ -141,8 +156,7 @@ export function structureProblems(md) {
       }
       return;
     }
-    if (sectionKey !== null && !STORY_SECTIONS.has(sectionKey)
-        && isStoryLine(line) && hasSourceRef(line)) {
+    if (sectionKey !== null && !STORY_SECTIONS.has(sectionKey) && looksLikeStory(line)) {
       problems.push({ line: i + 1, kind: 'story-outside-story-section', text: line.slice(0, 72) });
     }
   });

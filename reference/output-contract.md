@@ -216,7 +216,13 @@ equal the number of stories in the briefing when no story line is repeated.
   requirement, so never duplicate a story to move the counts;
 - the fetch count - how many distinct **article-page** fetches the run made (one
   per URL, however many HTTP requests the retries cost), against the 20-30
-  target, which stays guidance and not a gate. The deterministic collectors'
+  target, which stays guidance and not a gate. The count is by URL, never by
+  request: a URL that exhausted all eight attempts counts once. The request cost
+  behind it is recorded separately as `requests` in `.fetch-ledger.json` (see
+  `reference/research-input.md`), so a URL count that looks modest next to a
+  slow run can be reconciled, and state it in the variable part of the note when
+  the run is near the top of the band - one unresponsive URL can cost eight
+  requests and up to 8 x `--timeout`. The deterministic collectors'
   polls - the feed URLs in `.feeds.json` and the market instruments in
   `.markets.json` - are not article-page fetches and are not part of this count;
 - the section-placement disclosure - any call made under the tie-break above;

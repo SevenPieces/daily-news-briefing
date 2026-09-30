@@ -268,7 +268,8 @@ async function main() {
     items: deduped,
   };
   const text = JSON.stringify(payload, null, 2);
-  if (out) writeFileSync(out, text + '\n');
+  // Local state, not a deliverable: an explicit mode instead of the umask.
+  if (out) writeFileSync(out, text + '\n', { mode: 0o600 });
   else process.stdout.write(text + '\n');
 
   // Every feed failing is an outage, not a quiet news day: an empty result with

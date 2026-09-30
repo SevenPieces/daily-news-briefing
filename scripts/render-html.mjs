@@ -374,7 +374,10 @@ const js = [
 
 const doc = '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>' + esc(title) + '</title>\n<style>\n' + css + '\n</style>\n</head>\n<body id="top">\n<header class="top"><div class="wrap"><h1>' + esc(title) + '</h1><p class="meta">' + esc(meta) + '</p><div class="controls"><input id="q" type="search" placeholder="Search / 搜索"><label class="tog"><input type="checkbox" id="collapse"> collapse all / 折叠全部</label></div><nav class="topics">' + topicsHtml + '</nav></div></header>\n\n<main>\n' + body + '\n</main>\n<script>\n' + js + '\n</script>\n<a id="toTop" href="#top" aria-label="Back to top" title="Back to top / 回到顶部">&#8593;</a>\n</body>\n</html>\n';
 
-writeFileSync(outPath, doc);
+// The HTML is the deliverable, so it is explicitly world-readable rather than
+// inheriting the process umask; the scripts' other outputs are local state and
+// are written 0600.
+writeFileSync(outPath, doc, { mode: 0o644 });
 // storyLines counts story lines in the rendered HTML, one per rendered story
 // list item. It equals the briefing's story count when no story line is
 // repeated, and is larger only when a story is deliberately printed twice - a

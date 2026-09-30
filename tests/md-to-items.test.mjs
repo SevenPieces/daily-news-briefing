@@ -198,3 +198,32 @@ test('a previous output file is removed before parsing', (t) => {
   // so update-state.mjs would ingest stories from the wrong briefing.
   assert.ok(!existsSync(out), 'the previous run output must be removed before parsing');
 });
+
+test('a non-bold bullet with a real [src:] reference is not indexed, while a bold-headed one is', (t) => {
+  const dir = tempDir(t);
+  const note = '- Note: two rows are stale, see [src:BBC 2026-09-29 12:10](https://example.com/note) [prov:link]';
+  const control = '- **Indexed bold control** - Synthetic summary. [src:BBC 2026-09-29 12:10](https://example.com/control) #new [prov:full]';
+  const md = briefing().replace('### Politics', note + '\n' + control + '\n### Politics');
+  assert.ok(md.includes('two rows are stale'), 'fixture injection did not apply');
+  assert.ok(md.includes('Indexed bold control'), 'fixture injection did not apply');
+  const mdPath = writeText(join(dir, 'briefing.md'), md);
+  const out = join(dir, OUT);
+  const res = runScript(SCRIPT, [mdPath, '--out', out]);
+  assert.equal(res.status, 0, res.stderr);
+  const items = readItems(out);
+
+  // Regression: indexing only required a [src:] link, so this note became an
+  // index entry whose title was the note text - a garbage "story" for
+  // update-state.mjs to carry forward.
+  assert.equal(items.length, 11, 'ten fixture stories plus exactly one control');
+  assert.deepEqual(
+    items.filter((i) => i.title === 'Indexed bold control').map((i) => i.title),
+    ['Indexed bold control'],
+  );
+  assert.ok(!items.some((i) => i.title.includes('two rows are stale')), 'the note must not be an item');
+  assert.ok(!readText(out).includes('two rows are stale'), 'the note text must not appear anywhere in the index');
+
+  // Positive control: the bold-headed line in the same position was indexed, so
+  // the absence above is about the missing headline and nothing else.
+  assert.ok(items.some((i) => i.title === 'Indexed bold control'));
+});

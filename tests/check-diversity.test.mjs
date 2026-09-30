@@ -143,3 +143,84 @@ test('an unknown "## " heading exits 2', (t) => {
   assert.match(res.stderr, /Worldwide/);
   assert.equal(res.stdout, '');
 });
+
+// ---------------------------------------------------------------------------
+// Behaviour added after the first suite: the "unparsed" bucket, so a section
+// whose stories carry no usable [src:] stamp can no longer look empty.
+// ---------------------------------------------------------------------------
+
+test('stories whose [src:] has a date but no clock time fail instead of reading as an empty section', (t) => {
+  const dir = tempDir(t);
+  const md = doc([
+    chinaStory('中国一', '新华网', 'https://example.com/c1'),
+    chinaStory('中国二', '央广网', 'https://example.com/c2'),
+  ])
+    .replace('[src:BBC 2026-09-29 12:10]', '[src:BBC 2026-09-29]')
+    .replace('[src:Al Jazeera 2026-09-29 12:10]', '[src:Al Jazeera 2026-09-29]');
+  assert.ok(md.includes('[src:BBC 2026-09-29]('), 'the Global stamp was not stripped');
+  assert.ok(md.includes('[src:Al Jazeera 2026-09-29]('), 'the second Global stamp was not stripped');
+  assert.ok(!md.includes('[src:BBC 2026-09-29 12:10]'), 'a Global story still has a clock time');
+  const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+
+  // Regression: sourceRef() could not attribute these two lines, so they were
+  // skipped, the section printed 'Global: 0 items' and the gate said
+  // DIVERSITY: OK - exactly the silent pass this bucket exists to prevent.
+  assert.equal(res.status, 1);
+  assert.match(res.stdout, /FAIL: 2 story line\(s\) in Global or China carry no usable \[src:OUTLET YYYY-MM-DD HH:MM\] reference, so no outlet could be counted/);
+  assert.match(res.stdout, /^    line \d+ {2}- \*\*Global one\*\*/m);
+  assert.match(res.stdout, /^    line \d+ {2}- \*\*Global two\*\*/m);
+  assert.match(res.stdout, /DIVERSITY: FAIL/);
+  assert.doesNotMatch(res.stdout, /DIVERSITY: OK/);
+
+  // The per-section summary line still says 0 items, but it is no longer "as if
+  // the section were simply empty": the gate has already said, above it, that
+  // it could not attribute those lines. Pinning the order makes the difference
+  // between the old silent pass and this refusal.
+  const failAt = res.stdout.indexOf('no outlet could be counted');
+  const zeroAt = res.stdout.indexOf('Global: 0 items');
+  assert.ok(failAt >= 0, 'the no-outlet FAIL line must be printed');
+  assert.ok(zeroAt >= 0, 'the per-section summary line is still printed');
+  assert.ok(failAt < zeroAt, 'the no-outlet FAIL must precede the section summary');
+
+  // Positive control: the section that DID carry a clock time is still counted,
+  // so the zero above is about the Global stamps alone.
+  assert.match(res.stdout, /^China: 2 items, 2 distinct outlet\(s\): 新华网, 央广网$/m);
+});
+
+test('the same two stories with a full timestamp pass (control for the unparsed bucket)', (t) => {
+  const dir = tempDir(t);
+  const md = doc([
+    chinaStory('中国一', '新华网', 'https://example.com/c1'),
+    chinaStory('中国二', '央广网', 'https://example.com/c2'),
+  ]);
+  assert.ok(md.includes('[src:BBC 2026-09-29 12:10]'), 'the control needs a full Global stamp');
+  const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  assert.deepEqual(res.stdout.trimEnd().split('\n'), [
+    'Global: 2 items, 2 distinct outlet(s): BBC, Al Jazeera',
+    'China: 2 items, 2 distinct outlet(s): 新华网, 央广网',
+    'DIVERSITY: OK',
+  ]);
+});
+
+test('a non-bold bullet carrying a real [src:] reference in Global is counted and fails', (t) => {
+  const dir = tempDir(t);
+  const note = '- Note: two rows are stale, see [src:BBC 2026-09-29 12:10](https://example.com/note) [prov:link]';
+  const md = doc([
+    chinaStory('中国一', '新华网', 'https://example.com/c1'),
+    chinaStory('中国二', '央广网', 'https://example.com/c2'),
+  ]).replace('## China / 中国', note + '\n## China / 中国');
+  assert.ok(md.includes('two rows are stale'), 'fixture injection did not apply');
+  const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+
+  // Regression: looksLikeStory() widened, so a bullet that merely carries a
+  // [src:] link is no longer invisible to this gate - it lands in the unparsed
+  // bucket instead of being neither counted nor reported.
+  assert.equal(res.status, 1);
+  assert.match(res.stdout, /FAIL: 1 story line\(s\) in Global or China carry no usable \[src:OUTLET YYYY-MM-DD HH:MM\] reference, so no outlet could be counted/);
+  assert.match(res.stdout, /^    line \d+ {2}- Note: two rows are stale/m);
+  assert.match(res.stdout, /DIVERSITY: FAIL/);
+  // Positive control: the two real stories are still attributed, so the failure
+  // is caused by the note alone.
+  assert.match(res.stdout, /^Global: 2 items, 2 distinct outlet\(s\): BBC, Al Jazeera$/m);
+});

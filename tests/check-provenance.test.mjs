@@ -162,3 +162,163 @@ test('indented bullets are never counted as stories', (t) => {
   assert.deepEqual(summary(res.stdout), { storyLines: 10, full: 9, feed: 1, link: 0 });
   assert.match(res.stdout, /PROVENANCE: OK/);
 });
+
+// ---------------------------------------------------------------------------
+// Behaviour these tests pin was added after the first suite: the "malformed"
+// bucket, and the structural refusals of scripts/lib/sections.mjs.
+// ---------------------------------------------------------------------------
+
+const MALFORMED_LINE = '- Note: two rows are stale, see [src:BBC 2026-09-29 12:10](https://example.com/stale) [prov:link]';
+
+test('a bullet meant as a story with no bold headline is reported as malformed, not skipped', (t) => {
+  const dir = tempDir(t);
+  const mdPath = writeText(join(dir, 'briefing.md'), doc([MALFORMED_LINE]));
+  const res = runScript(SCRIPT, [mdPath]);
+
+  // Regression: looksLikeStory() was widened exactly so that this line is
+  // REPORTED. Before, it was neither a story nor a complaint - the line was
+  // skipped everywhere, so nothing that read the briefing ever saw it.
+  assert.equal(res.status, 1);
+  assert.match(res.stdout, /PROVENANCE: FAIL/);
+  assert.match(res.stdout, /malformed: 1/);
+  assert.match(res.stdout, /meant as stories but do not open with a bold headline/);
+  assert.match(res.stdout, /^    line \d+ {2}\(Global\) {2}- Note: two rows are stale/m);
+  // It fails; it is not quietly promoted to a story either.
+  const c = summary(res.stdout);
+  assert.equal(c.storyLines, 0);
+  assert.equal(c.full + c.feed + c.link, 0);
+});
+
+test('the same bullet with a bold headline is counted normally (control for malformed)', (t) => {
+  const dir = tempDir(t);
+  const mdPath = writeText(join(dir, 'briefing.md'), doc([
+    '- **Note: two rows are stale** - see [src:BBC 2026-09-29 12:10](https://example.com/stale) [prov:link]',
+  ]));
+  const res = runScript(SCRIPT, [mdPath]);
+
+  // Control: only the missing bold headline explains the failure above, so the
+  // malformed bucket is not merely "any bullet that carries a [src:] link".
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  assert.match(res.stdout, /PROVENANCE: OK/);
+  assert.doesNotMatch(res.stdout, /malformed/);
+  assert.deepEqual(summary(res.stdout), { storyLines: 1, full: 0, feed: 0, link: 1 });
+});
+
+test('an unmapped "## " heading exits 2 with the contract message and prints no counts at all', (t) => {
+  const dir = tempDir(t);
+  // Positive control first: the untouched fixture DOES print a count line, so
+  // the absence asserted below is a property of the refused run, not of the tool.
+  const good = runScript(SCRIPT, [writeText(join(dir, 'good.md'), briefing())]);
+  assert.equal(good.status, 0, good.stderr);
+  assert.match(good.stdout, /^story lines: 10 \|/m);
+
+  const fixture = briefing();
+  assert.equal((fixture.match(/^## Global$/gm) || []).length, 1, 'fixture must have exactly one "## Global"');
+  const mdPath = writeText(join(dir, 'briefing.md'), fixture.replace('## Global', '## Worldwide'));
+  const res = runScript(SCRIPT, [mdPath]);
+
+  // Regression: the gate refused the structure but could still print counts for
+  // the sections it happened to recognise, so "refused to evaluate" and
+  // "evaluated and passed" were indistinguishable.
+  assert.equal(res.status, 2);
+  assert.match(res.stderr, /does not match the output contract/i);
+  assert.match(res.stderr, /unrecognised "## " section heading/);
+  assert.match(res.stderr, /Worldwide/);
+  assert.equal(res.stdout, '');
+  assert.doesNotMatch(res.stdout, /story lines:/);
+});
+
+test('a "### " sub-heading outside Global/China, under ## Sources, exits 2', (t) => {
+  const dir = tempDir(t);
+  const md = briefing().replace('## Sources / 来源', '## Sources / 来源\n### Stray under sources');
+  assert.ok(md.includes('### Stray under sources'), 'fixture injection did not apply');
+  const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+
+  // Regression: only Global, China and the Coverage note may carry a '### '.
+  // Anywhere else it was read as an aspect, or ignored.
+  assert.equal(res.status, 2);
+  assert.match(res.stderr, /sub-heading outside Global, China or the Coverage note/);
+  assert.match(res.stderr, /Stray under sources/);
+  assert.equal(res.stdout, '');
+});
+
+test('the blessed Coverage-note sub-heading passes; any other one exits 2', (t) => {
+  const dir = tempDir(t);
+  const blessed = briefing({ coverageSubheading: true });
+  assert.ok(blessed.includes('### Additional notes / 补充说明'), 'fixture injection did not apply');
+
+  const ok = runScript(SCRIPT, [writeText(join(dir, 'blessed.md'), blessed)]);
+  // Regression, positive direction: the one sub-heading the real briefing used
+  // under the Coverage note must not itself be treated as a deviation.
+  assert.equal(ok.status, 0, ok.stdout + ok.stderr);
+  assert.match(ok.stdout, /PROVENANCE: OK/);
+  assert.deepEqual(summary(ok.stdout), { storyLines: 10, full: 9, feed: 1, link: 0 });
+
+  const other = runScript(SCRIPT, [writeText(join(dir, 'other.md'), blessed.replace('### Additional notes / 补充说明', '### Anything else'))]);
+  assert.match(other.stderr, /does not match the output contract/i);
+  assert.equal(other.status, 2);
+  assert.match(other.stderr, /sub-heading the Coverage note does not define/);
+  assert.match(other.stderr, /Anything else/);
+  assert.equal(other.stdout, '');
+});
+
+test('a second "### Additional notes / 补充说明" inside the Coverage note exits 2', (t) => {
+  const dir = tempDir(t);
+  const md = briefing({ coverageSubheading: true })
+    .replace('### Additional notes / 补充说明', '### Additional notes / 补充说明\n### Additional notes / 补充说明');
+  assert.equal((md.match(/### Additional notes \/ 补充说明/g) || []).length, 2, 'the duplicate was not injected');
+  const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+
+  // Regression: the blessed sub-heading was a set-membership test with no
+  // "seen already" state, so a second copy was accepted as normal.
+  assert.equal(res.status, 2);
+  assert.match(res.stderr, /second Coverage-note sub-heading/);
+  assert.equal(res.stdout, '');
+});
+
+test('a story-shaped bullet in Market snapshot, the Coverage note or the Sources exits 2', (t) => {
+  const dir = tempDir(t);
+  const bullet = (label) => '- **' + label + '** - structurally illegal. [src:BBC 2026-09-29 12:10](https://example.com/' + label + ') [prov:full]';
+  const variants = [
+    ['## Market snapshot', briefing().replace('## Global', bullet('Market-shaped') + '\n\n## Global'), 'Market-shaped'],
+    ['## Coverage note', briefing().replace('Quiet aspects: none.', 'Quiet aspects: none.\n' + bullet('Coverage-shaped')), 'Coverage-shaped'],
+    ['## Sources', briefing().replace('## Sources / 来源', '## Sources / 来源\n' + bullet('Sources-shaped')), 'Sources-shaped'],
+  ];
+  // Positive control: the untouched fixture is accepted, so "exit 2" below is
+  // caused by the injected bullet and nothing else.
+  const base = runScript(SCRIPT, [writeText(join(dir, 'base.md'), briefing())]);
+  assert.equal(base.status, 0, base.stdout + base.stderr);
+
+  for (const [where, md, label] of variants) {
+    assert.ok(md.includes(label), 'injection into ' + where + ' did not apply');
+    const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+    // Regression: these bullets sat in sections the exclusion list did not
+    // match, so they were silently skipped instead of refused.
+    assert.equal(res.status, 2, where + ' must be refused');
+    assert.match(res.stderr, /story-shaped bullet in a section that holds no stories/);
+    assert.match(res.stderr, new RegExp(label));
+    assert.equal(res.stdout, '', where + ' must not print story counts');
+  }
+});
+
+test('an indented bullet is never a story, in any bucket', (t) => {
+  const dir = tempDir(t);
+  const indented = (label, url) => '  - **' + label + '** - [src:BBC 2026-09-29 12:10](' + url + ') [prov:full]';
+  const md = briefing()
+    .replace('| S&P 500 |', indented('Indented market', 'https://example.com/i1') + '\n| S&P 500 |')
+    .replace('Quiet aspects: none.', 'Quiet aspects: none.\n' + indented('Indented coverage', 'https://example.com/i2'))
+    .replace('- BBC - https://www.bbc.co.uk/news/articles/example-one', indented('Indented sources', 'https://example.com/i3') + '\n- BBC - https://www.bbc.co.uk/news/articles/example-one')
+    .replace('### Politics', indented('Indented global', 'https://example.com/i4') + '\n### Politics');
+  for (const label of ['Indented market', 'Indented coverage', 'Indented sources', 'Indented global']) {
+    assert.ok(md.includes(label), 'injection of "' + label + '" did not apply');
+  }
+  const res = runScript(SCRIPT, [writeText(join(dir, 'briefing.md'), md)]);
+
+  // Regression: an indented sub-note was a story in the Market-snapshot and
+  // Coverage-note buckets (inflating the count, and with no marker failing a
+  // valid briefing) and a "malformed" story in the story sections.
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  assert.match(res.stdout, /PROVENANCE: OK/);
+  assert.doesNotMatch(res.stdout, /malformed|unsourced|unmarked|misplaced|duplicated|FAIL/);
+  assert.deepEqual(summary(res.stdout), { storyLines: 10, full: 9, feed: 1, link: 0 });
+});

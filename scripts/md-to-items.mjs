@@ -165,7 +165,10 @@ function main() {
   }
 
   try {
-    writeFileSync(outPath, JSON.stringify(items, null, 2) + '\n');
+    // The index is local state that drives #new/#followup classification, not a
+    // deliverable: an explicit mode keeps it out of every other local user's
+    // reach whatever the process umask happens to be.
+    writeFileSync(outPath, JSON.stringify(items, null, 2) + '\n', { mode: 0o600 });
   } catch (err) {
     process.stderr.write('md-to-items: cannot write ' + outPath + ': ' + String((err && err.message) || err) + '\n');
     process.exit(2);

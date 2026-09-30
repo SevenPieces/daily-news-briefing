@@ -860,7 +860,8 @@ async function main() {
       rounds: opts.retries, profiles: PROFILES.map((p) => p.name), results,
     };
     const text = JSON.stringify(payload, null, 2);
-    if (opts.out) writeFileSync(opts.out, text + '\n'); else process.stdout.write(text + '\n');
+    // Local scratch, not a deliverable: an explicit mode instead of the umask.
+    if (opts.out) writeFileSync(opts.out, text + '\n', { mode: 0o600 }); else process.stdout.write(text + '\n');
   } finally {
     // Unconditional, so a throw after the fetches - an unwritable --out, say -
     // cannot leave the scratch directory and the last body file in it behind.

@@ -119,6 +119,12 @@ fetched, 1 when any failed, and 2 on a usage error or an unreadable file.
 - **Vary the profile before concluding "blocked".** One failed attempt is
   evidence of nothing - but a 402 from a licensing gate is an answer, not a
   challenge.
+- **A body over the cap is refused, not truncated, and never retried.** The cap
+  is 64 MiB; `--max-body BYTES` (or `FETCH_PAGE_MAX_BODY`) moves it. A declared
+  length over it is refused before a byte of the body is read, and a chunked body
+  is stopped as the running total passes it, so the attempt costs at most the cap.
+  The refusal is terminal: the first attempt settles it, because a body size is a
+  property of the resource, not of the profile or the transport.
 - **Prefer `datePublished` over `dateModified`.** That is why `dateSource` is
   reported: a bare modification time is later than publication and can silently
   move an item across the coverage window. A modification time alone is not a

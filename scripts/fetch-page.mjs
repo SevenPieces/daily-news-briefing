@@ -650,7 +650,14 @@ async function viaFetch(url, ms, profile) {
     const declared = Number(res.headers.get('content-length') || 0);
     // The cheap refusal first: a declared length over the cap is answered
     // without reading a byte of the body.
-    if (declared > MAX_BODY) { ctl.abort(); throw new Error('declared body ' + declared + ' bytes exceeds the ' + MAX_BODY + ' cap'); }
+    if (declared > MAX_BODY) {
+      ctl.abort();
+      const err = new Error('declared body ' + declared + ' bytes exceeds the ' + MAX_BODY + ' cap');
+      // Tagged, so the catch below hands it to the ladder as a refusal instead
+      // of letting it read as a transport failure and be retried eight times.
+      err.oversize = true;
+      throw err;
+    }
     // The body is taken as bytes, not text(): res.text() would decode it as UTF-8
     // and destroy the very bytes the charset above is supposed to interpret.
     const buffer = await readBodyCapped(res);
@@ -720,10 +727,14 @@ function viaCurl(url, ms, profile) {
   let size = 0;
   try { size = statSync(bodyFile).size; } catch { size = 0; }
   if (size > MAX_BODY) {
-    throw new Error('body ' + size + ' bytes exceeds the ' + MAX_BODY + ' cap');
+    const err = new Error('body ' + size + ' bytes exceeds the ' + MAX_BODY + ' cap');
+    err.oversize = true;
+    throw err;
   }
   if (exitCode === CURL_MAX_FILESIZE_EXIT) {
-    throw new Error('body exceeded the ' + MAX_BODY + ' byte cap (curl stopped the transfer)');
+    const err = new Error('body exceeded the ' + MAX_BODY + ' byte cap (curl stopped the transfer)');
+    err.oversize = true;
+    throw err;
   }
   // A real response is the only case that reads the file back, so a transport
   // failure can never surface the scratch path as its cause.
@@ -834,6 +845,17 @@ async function fetchOne(url, rounds, ms, wantText) {
             return { url, ok: false, status: r.status, attempts, via: r.via, profile: profile.name, error: reason + ': ' + causeLabel(r) };
           }
         } catch (err) {
+          // A body over the cap is terminal: the size is a property of the
+          // resource, so every remaining profile and transport would fetch the
+          // same 64MiB and refuse it again. Measured before this: a chunked
+          // 210MiB origin cost four capped transfers and ~200MB peak RSS for a
+          // verdict the first attempt had already reached.
+          if (err && err.oversize) {
+            return {
+              url, ok: false, status: lastStatus, attempts, via: lastVia, profile: profile.name,
+              error: 'refused - not retried: ' + String(err.message).slice(0, 120),
+            };
+          }
           errors.push(String((err && err.message) || err).slice(0, 80));
         }
       }

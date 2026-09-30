@@ -26,3 +26,6 @@ briefing-state.json
 .staging/
 briefing-*.md
 briefing-*.html
+
+# briefings/ is the output directory; ignore it.
+briefings/

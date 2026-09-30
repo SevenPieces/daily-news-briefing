@@ -13,7 +13,7 @@
 // holds the coverage baseline and a seven-day index of recent stories only: it
 // derives nothing about newness.
 
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 
 const MAX_WINDOW_HOURS = 72;
 const FIRST_RUN_HOURS = 24;
@@ -49,11 +49,53 @@ function arg(name, fallback) {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
-function readJson(path, fallback) {
+// Reading the state is not a lookup with a fallback. A file that exists but
+// cannot be parsed is evidence this run must not overwrite: treating it as "no
+// state" made plan announce a first-run window over a truncated
+// briefing-state.json ("No previous briefing - covering latest 24h") and update
+// then overwrite the file, destroying lastBriefingAt and the whole item index,
+// with exit 0 and nothing on stderr. Only a missing file is a genuine first run;
+// every other failure - a parse error, or a read error such as EACCES - names
+// the path and exits 2 from both commands, before anything is written.
+function readState(path) {
+  let text;
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    text = readFileSync(path, 'utf8');
   } catch (err) {
-    return fallback;
+    if (err && err.code === 'ENOENT') return { exists: false, text: null, state: null };
+    process.stderr.write('update-state: cannot read state file ' + path + ': '
+      + String((err && err.message) || err) + '\n');
+    process.exit(2);
+  }
+  try {
+    return { exists: true, text, state: JSON.parse(text) };
+  } catch (err) {
+    process.stderr.write('update-state: state file ' + path + ' exists but is not valid JSON ('
+      + String((err && err.message) || err) + '); reading it as "no state" would overwrite a coverage baseline and an item index '
+      + 'that cannot be recovered, so nothing was written. Fix the file by hand, or delete it to start fresh.\n');
+    process.exit(2);
+  }
+}
+
+// A state write must never leave a truncated file behind: an interrupted
+// writeFileSync produces exactly the half-written state readState refuses. The
+// payload goes to a temp file in the target's own directory - so the rename
+// stays on one filesystem and is atomic - and is renamed over the target. On
+// failure the temp is removed and the previous state is left intact.
+function writeStateAtomic(path, data) {
+  const tmp = path + '.' + process.pid + '.tmp';
+  try {
+    // The state is local state, not a deliverable: explicit 0600 rather than the
+    // process umask, which made it group-writable under a 0002 umask.
+    writeFileSync(tmp, data, { mode: 0o600 });
+    renameSync(tmp, path);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch (cleanupErr) {
+      // The temp may never have been created; the original error is the story.
+    }
+    throw err;
   }
 }
 
@@ -138,24 +180,40 @@ function planWindow(previousAt, now) {
 // still this run's. Sharing it is the point: plan may announce only a record
 // update will consume, and update may consume only a record plan would have
 // announced, so the end in the briefing header and the baseline in the state
-// cannot drift apart. A record fails it when its until is unparseable, sits
-// behind the last briefing, is older than PLANNED_WINDOW_MAX_AGE_HOURS, or lies
-// in the future - each is a leftover from an aborted run or a skewed clock,
-// never a window a live run announced. The verdict names the refusal rather than
-// just returning null, because update must say which predicate failed before it
-// falls back to its own clock: an ignored record moves the stored baseline away
-// from the end the header announced, and that must not happen in silence.
+// cannot drift apart. A record fails it when its until is unparseable, has no
+// parseable since, starts after it ends, sits behind the last briefing, is older
+// than PLANNED_WINDOW_MAX_AGE_HOURS, lies in the future, or is shorter than
+// MIN_WINDOW_SECONDS - each is a leftover from an aborted run or a skewed clock,
+// never a window a live run announced and update could consume. The verdict
+// names the refusal rather than just returning null, because update must say
+// which predicate failed before it falls back to its own clock: an ignored
+// record moves the stored baseline away from the end the header announced, and
+// that must not happen in silence.
 function classifyPlannedWindow(state, baseline, now) {
   const planned = state && state.plannedWindow ? state.plannedWindow : null;
   const plannedEnd = planned ? validDate(planned.until) : null;
   // A recorded end that does not parse is a rejection like any other, and it
   // must name itself too: the same warning covers every rejected record.
   if (!plannedEnd) return { plannedEnd: null, reason: planned ? 'not a parseable date' : null };
+  // A record without a usable start is not a window this run can announce:
+  // Step 3 takes --since from plan's stdout, so a record carrying only until
+  // would make it undefined, and a start after the end is no window at all.
+  const plannedSince = validDate(planned.since);
+  if (!plannedSince) return { plannedEnd: null, reason: 'missing a parseable start' };
+  if (plannedSince.getTime() > plannedEnd.getTime()) return { plannedEnd: null, reason: 'a start after its end' };
   if (baseline && plannedEnd.getTime() < baseline.getTime()) return { plannedEnd: null, reason: 'behind the baseline' };
   if (now.getTime() - plannedEnd.getTime() > PLANNED_WINDOW_MAX_AGE_HOURS * HOUR) {
     return { plannedEnd: null, reason: 'older than ' + PLANNED_WINDOW_MAX_AGE_HOURS + 'h' };
   }
   if (plannedEnd.getTime() > now.getTime() + CLOCK_SKEW_TOLERANCE_MS) return { plannedEnd: null, reason: 'in the future' };
+  // A record whose own window is shorter than update's MIN_WINDOW_SECONDS can
+  // never be consumed: update would close coverage at that end and refuse the
+  // short window, and plan's next pass reuses the same frozen end, so every
+  // retry fails until the record ages out. Refusing the record here makes plan
+  // recompute from the baseline instead, and the retry widens with real time.
+  if (Math.floor((plannedEnd.getTime() - plannedSince.getTime()) / 1000) < MIN_WINDOW_SECONDS) {
+    return { plannedEnd: null, reason: 'shorter than ' + MIN_WINDOW_SECONDS + 's' };
+  }
   return { plannedEnd, reason: null };
 }
 
@@ -205,29 +263,51 @@ function retained(items, now) {
 }
 
 // The watchlist is an index derived from the retained items, never a separately
-// maintained list: deduplicated by title, keeping the earliest date.
+// maintained list: deduplicated by title, keeping the earliest date - when the
+// title entered the list - and the newest lastSeen, when it was last reported.
+// Keeping the earliest sighting's lastSeen too made a story reported again today
+// still report a lastSeen from up to seven days ago, the oldest sighting
+// retention still holds, so a live story read as an aged-out one. Membership is
+// unchanged: a title stays while any watch-flagged sighting is retained, and
+// leaves when none is within RETENTION_DAYS.
 function buildWatchlist(items) {
   const byTitle = new Map();
   for (const it of items) {
     if (!it || !it.watch) continue;
     const title = it.title || '';
-    const before = byTitle.get(title);
-    if (!before || String(it.date || '') < String(before.date || '')) byTitle.set(title, it);
+    const seen = validDate(it.lastSeen);
+    const entry = byTitle.get(title);
+    if (!entry) {
+      byTitle.set(title, { title, date: it.date, lastSeen: it.lastSeen });
+      continue;
+    }
+    if (String(it.date || '') < String(entry.date || '')) entry.date = it.date;
+    const latest = validDate(entry.lastSeen);
+    if (seen && (!latest || seen.getTime() > latest.getTime())) entry.lastSeen = it.lastSeen;
   }
   return Array.from(byTitle.values()).map((it) => ({ title: it.title, date: it.date, lastSeen: it.lastSeen }));
 }
 
 function main() {
   const command = process.argv[2];
+  // The command is checked before the state is read: an unknown command is a
+  // usage error (exit 1) whatever the file happens to contain, while the
+  // unreadable-or-unparseable state check below is the more specific failure.
+  if (command !== 'plan' && command !== 'update') {
+    process.stderr.write('usage: update-state.mjs plan|update --state FILE [--items FILE] [--out FILE] [--date YYYY-MM-DD] [--force]\n');
+    process.exit(1);
+  }
   const statePath = arg('--state', 'briefing-state.json');
   const now = new Date();
-  const raw = readJson(statePath, null);
+  const loaded = readState(statePath);
+  const raw = loaded.state;
 
   if (command === 'plan') {
     const state = raw && typeof raw === 'object' ? raw : null;
     const window = planWindow(state && state.lastBriefingAt, now);
     // Record the window so update closes coverage at the same end time. An
-    // absent or unreadable state is left alone: plan never creates the file.
+    // absent state is a genuine first run and is left alone: plan never creates
+    // the file (an unreadable or unparseable one is fatal in readState).
     // Re-running plan for a baseline that already has a plan keeps the recorded
     // one, so the end the header announces is the end update consumes.
     let effective = window;
@@ -275,9 +355,40 @@ function main() {
           + ', so it was announced by an earlier plan run. '
           + 'Delete plannedWindow in the state file, or plan against a different --state file, for a fresh window.\n');
       } else {
+        // A baseline ahead of this shell's clock - a host clock that stepped
+        // backwards, or a hand-edited state - makes the computed window
+        // negative, and the label would announce "covering latest -2h". Recording
+        // that in silence hides a corrupt baseline behind a plausible-looking
+        // run; clamping since to until would hide the same corruption behind a
+        // "0h" label instead. Say it out loud and leave update's negative-window
+        // guard to refuse the write.
+        const spanMs = validDate(window.until).getTime() - validDate(window.since).getTime();
+        if (spanMs <= 0) {
+          process.stderr.write('update-state: lastBriefingAt ' + state.lastBriefingAt
+            + ' is ahead of this shell\'s clock, so the window computed from it covers ' + window.hours
+            + 'h (' + window.since + ' -> ' + window.until + ') and would read as a negative window; recording it as computed. '
+            + 'A baseline in the future can never be covered: correct lastBriefingAt in ' + statePath
+            + ' to a past instant, or delete the state file to start fresh.\n');
+        }
         const payload = Object.assign({}, state, { plannedWindow: window });
+        // plan and update are read-modify-write passes over the same file and
+        // must not run concurrently. plan holds a single field to add, so it
+        // re-reads the file immediately before the write and refuses when
+        // another process committed something in between - the alternative is
+        // silently dropping a baseline or an item index plan never saw.
         try {
-          writeFileSync(statePath, JSON.stringify(payload, null, 2) + '\n');
+          if (readFileSync(statePath, 'utf8') !== loaded.text) {
+            process.stderr.write('update-state: ' + statePath + ' changed while plan was running (another plan or update '
+              + 'committed to it), so this plan refuses to overwrite it with the content it read. Nothing was written; re-run plan.\n');
+            process.exit(2);
+          }
+        } catch (err) {
+          process.stderr.write('update-state: cannot re-read ' + statePath + ' before writing it: '
+            + String((err && err.message) || err) + '\n');
+          process.exit(2);
+        }
+        try {
+          writeStateAtomic(statePath, JSON.stringify(payload, null, 2) + '\n');
         } catch (err) {
           process.stderr.write('update-state: cannot record the planned window in ' + statePath + ': '
             + String((err && err.message) || err) + '\n');
@@ -289,15 +400,19 @@ function main() {
     return;
   }
 
-  if (command !== 'update') {
-    process.stderr.write('usage: update-state.mjs plan|update --state FILE [--items FILE] [--out FILE] [--date YYYY-MM-DD] [--force]\n');
-    process.exit(1);
-  }
-
   const itemsPath = arg('--items', '');
   if (!itemsPath) {
     process.stderr.write('update-state: update requires --items FILE\n');
     process.exit(1);
+  }
+  // --date keys every appended item and the (date,title) dedupe, so a malformed
+  // value would poison the whole index for this run; accept only the shape the
+  // default (dateKey of the coverage end) produces.
+  const dateArg = arg('--date', null);
+  if (dateArg !== null && !/^\d{4}-\d{2}-\d{2}$/.test(String(dateArg))) {
+    process.stderr.write('update-state: --date ' + dateArg + ' is not YYYY-MM-DD, so it cannot key the item index; '
+      + 'pass the Asia/Shanghai briefing date or omit --date.\n');
+    process.exit(2);
   }
   let incoming;
   try {
@@ -345,8 +460,24 @@ function main() {
   // been rebuilt for it: an --items file older than the window it closes is a
   // previous day's index and would be ingested as this run's. No record means
   // update is being run on its own, where there is nothing to compare against.
+  //
+  // The comparison is deliberate and needs no timezone conversion: mtimeMs is
+  // epoch milliseconds, and plannedEnd.getTime() is the same instant parsed from
+  // the record's ISO-8601 stamp, so a "+08:00" until and a UTC mtime already sit
+  // in one clock domain and the offset cancels. In Step 6 order (md-to-items
+  // after plan) the file is newer than the end the record carries, so the guard
+  // stays quiet; it fires only for a file written before the plan this update
+  // consumed. A stat failure here means the file was removed between the read
+  // above and this point, which is unreadable input rather than a stale index.
   if (plannedEnd) {
-    const itemsMtime = statSync(itemsPath).mtimeMs;
+    let itemsMtime;
+    try {
+      itemsMtime = statSync(itemsPath).mtimeMs;
+    } catch (err) {
+      process.stderr.write('update-state: cannot stat --items file ' + itemsPath
+        + ' to compare it against the planned window: ' + String((err && err.message) || err) + '\n');
+      process.exit(2);
+    }
     if (itemsMtime < plannedEnd.getTime() - PLANNED_INDEX_GRACE_MS) {
       process.stderr.write('update-state: --items file ' + itemsPath + ' is older than the planned window it would close (last written '
         + new Date(itemsMtime).toISOString() + ', window ends ' + plannedEnd.toISOString()
@@ -379,7 +510,8 @@ function main() {
   if (windowSeconds < MIN_WINDOW_SECONDS && !force) {
     process.stderr.write('update-state: coverage window is only ' + windowSeconds + 's (under ' + MIN_WINDOW_SECONDS
       + 's), so this looks like a second update moments after the last one. Nothing was written. '
-      + 'Pass --force only after checking the run is genuinely new.\n');
+      + 'Delete plannedWindow in the state file - plan reuses it, which freezes the window at this length - '
+      + 'or re-run plan against a state file without it, or pass --force only after checking the run is genuinely new.\n');
     process.exit(3);
   }
 
@@ -397,7 +529,7 @@ function main() {
     process.exit(3);
   }
 
-  const lastBriefingDate = arg('--date', dateKey(coverageEnd));
+  const lastBriefingDate = dateArg !== null ? dateArg : dateKey(coverageEnd);
   const items = retained(state.items, now);
   // Step 6 can write the same curated line twice: a re-run of the step rebuilds
   // the index from the same Markdown, and two briefings on one calendar day that
@@ -448,8 +580,28 @@ function main() {
     items,
     watchlist,
   };
+  // plan and update are read-modify-write passes over the same file and must not
+  // run concurrently. When update writes back to the file it read, refuse if
+  // anything committed in between: the payload is a full replacement, so
+  // overwriting would drop a baseline or an item index this run never saw. A
+  // different --out is a fresh target with no previous content to lose.
+  if (outPath === statePath && loaded.exists) {
+    let current;
+    try {
+      current = readFileSync(statePath, 'utf8');
+    } catch (err) {
+      process.stderr.write('update-state: cannot re-read ' + statePath + ' before writing it: '
+        + String((err && err.message) || err) + '\n');
+      process.exit(2);
+    }
+    if (current !== loaded.text) {
+      process.stderr.write('update-state: ' + statePath + ' changed while update was running (another plan or update '
+        + 'committed to it), so this update refuses to overwrite it with the state it read. Nothing was written; re-run plan and update.\n');
+      process.exit(2);
+    }
+  }
   try {
-    writeFileSync(outPath, JSON.stringify(payload, null, 2) + '\n');
+    writeStateAtomic(outPath, JSON.stringify(payload, null, 2) + '\n');
   } catch (err) {
     process.stderr.write('update-state: cannot write ' + outPath + ': ' + String((err && err.message) || err) + '\n');
     process.exit(2);

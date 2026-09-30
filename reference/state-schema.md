@@ -95,9 +95,14 @@ next update. Nothing else ages out.
 The watchlist is a **retention list**, not a to-report list: it keeps every
 retained item flagged `watch`, whether or not a later briefing reports it. It is
 rebuilt on every update from the retained items with `watch: true`,
-deduplicated by title keeping the earliest `date`:
+deduplicated by title keeping the earliest `date` - when the title entered the
+list - and the newest `lastSeen` - when it was last reported:
 
     { "title": "...", "date": "YYYY-MM-DD", "lastSeen": "<ISO>" }
+
+Keeping the earliest sighting's `lastSeen` as well made a story reported again
+today still report a `lastSeen` from up to seven days ago, the oldest sighting
+retention still held, so a live story read as an aged-out one.
 
 An item enters the watchlist when it is flagged `watch` - an unresolved
 developing story that also has a new development inside the current window (see
@@ -114,9 +119,15 @@ only appears in a briefing when that new development exists.
   it in FILE as `plannedWindow` (read-modify-write; every other value is
   preserved). A reused window is announced: `plan` writes one line to stderr
   naming the record's age and its end, so a record an aborted run left behind is
-  visible; stdout and the state are unchanged either way. If FILE does not exist
-  or cannot be read, `plan` still prints and does **not** create the file.
-- A plannedWindow is **usable** when its `until` parses as a date, is not behind
+  visible; stdout and the state are unchanged either way. A FILE that does not
+  exist is a genuine first run: `plan` still prints and does **not** create the
+  file. A FILE that exists but cannot be read or parsed is fatal instead - exit
+  2 from both commands, nothing written - see "Writing the state" below.
+- A plannedWindow is **usable** when its `until` parses as a date, it carries a
+  `since` that parses and does not exceed `until`, its own span is at least
+  `MIN_WINDOW_SECONDS` (a shorter record could never be consumed: `update` would
+  close coverage at that end and refuse the short window, and `plan` would reuse
+  the same frozen record until it aged out), it is not behind
   `state.lastBriefingAt`, is no more than 12h old (it is not a leftover from an
   aborted run), and is not more than 5 minutes ahead of the command's own clock
   (a window no live run could have announced). `plan` and `update` share this one
@@ -151,19 +162,26 @@ only appears in a briefing when that new development exists.
   correct `lastBriefingAt` in the state file, or delete the state file and start
   fresh (which drops the recorded coverage). The baseline can only be corrupt
   that way by hand or by a backwards host clock, so refusing is the point;
-  `--force` does not discard coverage. An accepted window under about 0.1h keeps
-  the existing tenth-of-an-hour rounding, so it is labelled `covering latest 0h`:
-  the label's shape is unchanged and no smaller unit is invented.
+  `--force` does not discard coverage. `window.hours` keeps its
+  tenth-of-an-hour rounding, so a span up to about 3 minutes rounds to `0` and
+  is labelled `covering latest 0h`, while one from about 3 to about 9 minutes
+  rounds to `0.1`; the label's shape is unchanged and no smaller unit is
+  invented.
   A recorded `plannedWindow` that the usability predicate above rejects - it sits
-  behind `lastBriefingAt`, is older than 12h, is in the future, or carries an
+  behind `lastBriefingAt`, is older than 12h, is in the future, is shorter than
+  120s, lacks a parseable `since` (or has one after its `until`), or carries an
   `until` that does not parse - is no longer discarded in silence: `update`
   writes one stderr line naming the reason and saying coverage would end at this
-  run's own clock instead, then continues.
-  A refused second pass leaves the opposite residue: the `plannedWindow` a
-  re-`plan` wrote is *fresh* and ahead of the baseline, so the predicate accepts
-  it and the next run reuses a window of seconds, whose own `update`
-  `MIN_WINDOW_SECONDS` then refuses. A run that re-plans after its `update` must
-  delete that record, or plan against a different `--state` file.
+  run's own clock instead, then continues. A record whose own span is under
+  `MIN_WINDOW_SECONDS` is refused by the same predicate, so `plan` recomputes
+  from the baseline instead of reusing a window `update` is guaranteed to
+  refuse, and the retry widens with real time.
+  A refused second pass still leaves a residue: the `plannedWindow` a re-`plan`
+  wrote from a minutes-old baseline is *fresh* and ahead of the baseline, so the
+  predicate accepts it (it is only short once almost no time has passed) and its
+  own `update` then refuses on `MIN_WINDOW_SECONDS`. A run that re-plans after
+  its `update` must delete that record, or plan against a different `--state`
+  file.
 - **Re-run guard**: a second Step 6 pass has no planned window left to consume -
   the first pass sets `plannedWindow = null` - so it would close a window measured
   only from `lastBriefingAt` to its own clock. When that window is under
@@ -179,8 +197,12 @@ only appears in a briefing when that new development exists.
 - **Stale `--items` guard**: when `update` consumes a usable `plannedWindow`, an
   `--items` file whose mtime is older than that record's `until` minus 60
   seconds belongs to an earlier run, and `update` exits 3 with a message telling
-  the caller to re-run `scripts/md-to-items.mjs`. Without a usable record there
-  is nothing to compare against, so the guard is skipped.
+  the caller to re-run `scripts/md-to-items.mjs`. The comparison is between two
+  absolute instants - the file's `mtimeMs` and the recorded `until` parsed by
+  `Date` - so a `+08:00` `until` and a UTC mtime already share one clock domain
+  and the offset cancels; no conversion is needed. A stat failure (the file was
+  removed after it was read) exits 2. Without a usable record there is nothing
+  to compare against, so the guard is skipped.
 
 ## Window rule (the plan command)
 
@@ -196,7 +218,10 @@ exactly this rule:
 - it never prompts and never waits for input
 
 `update` accepts `--date` to set `lastBriefingDate`; it defaults to the
-Asia/Shanghai date of the coverage end, not the UTC date.
+Asia/Shanghai date of the coverage end, not the UTC date. A supplied `--date`
+must match `YYYY-MM-DD` - it keys every appended item and the `(date, title)`
+dedup, so a malformed value would poison the index for the whole run - and
+anything else is refused with exit 2.
 
 ## Items input (update --items)
 
@@ -254,7 +279,26 @@ adds `plannedWindow`; the conversion happens the next time `update` runs.
 | update | consume plannedWindow, append this run's items, rebuild the watchlist, write state |
 
 Both accept --state and print JSON to stdout; update also accepts --items (the
-run's curated items array), --out (write target), --date (YYYY-MM-DD) and
---force (proceed when the window is under two minutes but still positive, or
-when a second Step 6 pass has no recorded window and the state was closed minutes
-ago; never when the window is negative).
+run's curated items array), --out (write target), --date (YYYY-MM-DD; any other
+shape exits 2) and --force (proceed when the window is under two minutes but
+still positive, or when a second Step 6 pass has no recorded window and the
+state was closed minutes ago; never when the window is negative).
+
+## Writing the state
+
+Every state write is atomic: the payload goes to a temp file in the target's own
+directory and is renamed over the target, so an interrupted write can never
+leave a truncated state behind, and a failed write leaves the previous state
+intact.
+
+A state file that exists but cannot be read or parsed is **fatal** - exit 2 with
+the path and the parse error, from both `plan` and `update`, before anything is
+written. It is not "no state": reading it that way made `plan` announce a
+first-run window over a truncated `briefing-state.json` and `update` then
+overwrite the file, destroying `lastBriefingAt` and the whole item index, exit
+0, nothing on stderr. Only a missing file is a genuine first run.
+
+`plan` and `update` are read-modify-write passes over the same file and must not
+run concurrently: each re-reads the file immediately before writing and refuses
+(exit 2, nothing written) when it changed in the meantime, rather than overwrite
+a baseline or an item index it never saw.

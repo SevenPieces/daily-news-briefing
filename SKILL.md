@@ -324,12 +324,20 @@ left behind for the next run to reuse. Get the note right in this pass; run
 
 `update` also refuses an `--items` file older than the window it would close -
 `md-to-items` runs after `plan`, so the index it writes is never that old - so a
-previous run's index cannot be ingested as this run's.
+previous run's index cannot be ingested as this run's. That comparison is exact
+and needs no timezone conversion: the file's mtime and the recorded `until` are
+both absolute instants, so a `+08:00` state file cancels out. An `--items` file
+removed between the read and the comparison exits 2 rather than being skipped.
 
 `update` then closes coverage at the window `plan` announced, and refuses to
 write when that window is under two minutes (120s) - a second update moments
 after the last one - unless you pass `--force`, which is only right once you have
-checked the run is genuinely new. Two minutes is the "seconds old" case the
+checked the run is genuinely new. A record the shared usability predicate
+rejects as shorter than two minutes is not reused: `plan` recomputes from the
+baseline, so a retry widens with real time instead of reusing a window `update`
+is guaranteed to refuse - and if one is ever in the way, delete `plannedWindow`
+in the state file, since `plan` reuses it and freezes the window at that length.
+Two minutes is the "seconds old" case the
 guard exists to catch: a mid-day re-run, a catch-up, or a normal day all clear
 it. A second refusal band covers the same case minutes wide instead of seconds: a
 second Step 6 pass has no planned window left - the first pass consumed it - so

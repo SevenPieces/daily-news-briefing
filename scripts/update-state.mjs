@@ -355,6 +355,16 @@ function main() {
           + ', so it was announced by an earlier plan run. '
           + 'Delete plannedWindow in the state file, or plan against a different --state file, for a fresh window.\n');
       } else {
+        // A record exists but the shared predicate refused it. update names that
+        // same refusal when it meets one; plan replaced the record in silence, so
+        // a leftover from an aborted run simply disappeared. Name it here too,
+        // before the fresh window is recorded, so the two commands agree.
+        const verdict = classifyPlannedWindow(state, baseline, now);
+        if (verdict.reason) {
+          process.stderr.write('update-state: the planned window already recorded in ' + statePath
+            + ' was ignored (' + verdict.reason + '), so a fresh window was computed from the baseline '
+            + 'and the recorded one is replaced.\n');
+        }
         // A baseline ahead of this shell's clock - a host clock that stepped
         // backwards, or a hand-edited state - makes the computed window
         // negative, and the label would announce "covering latest -2h". Recording

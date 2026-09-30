@@ -165,6 +165,10 @@ function parseArgs(argv) {
       continue;
     }
     if (a.startsWith('--')) usage('unknown option ' + a);
+    // A URL that is not http(s) cannot be fetched by either transport, so it is
+    // a usage error: without this the ladder spent all eight attempts on a value
+    // the shell had already mistyped, and reported it as a transport failure.
+    if (!/^https?:\/\//i.test(a)) usage('not an http(s) URL: ' + a);
     opts.urls.push(a);
   }
   if (!opts.urls.length) usage();
@@ -332,6 +336,15 @@ function isPlausibleDate(value) {
 // the page's clock time was discarded and only the date-only meta survived.
 function normalizeStamp(value) {
   const v = String(value).trim();
+  // An explicit zone is information, not noise. Normalising an offset away
+  // destroys it: "2026-09-30T05:00:05.479Z" became "2026-09-30 05:00:05", which
+  // reads as Shanghai wall-clock and is eight hours early for a UTC page - the
+  // common case - while reference/research-input.md tells the agent to convert
+  // the offset the tool was supposed to preserve. Measured live 2026-09-30 on a
+  // BBC page: datePublished 2026-09-30T05:00:05.479Z was printed as 05:00:05
+  // when the page's own Shanghai time was 13:00. A value with no zone is still
+  // normalised to the contract's "YYYY-MM-DD HH:MM[:SS]" shape.
+  if (/Z$/i.test(v) || /[+-]\d{2}:?\d{2}$/.test(v)) return v;
   // Already a full stamp: keep the date exactly as the page wrote it and put a
   // single space before the clock. gov.cn writes "2026-09-30-11:23:00", which
   // Date.parse rejects as written and reads once the last dash is a space.
@@ -878,6 +891,7 @@ async function fetchOne(url, rounds, ms, wantText) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const results = [];
+  let writeError = null;
   try {
     for (const url of opts.urls) results.push(await fetchOne(url, opts.retries, opts.timeout, opts.text));
     const payload = {
@@ -886,7 +900,16 @@ async function main() {
     };
     const text = JSON.stringify(payload, null, 2);
     // Local scratch, not a deliverable: an explicit mode instead of the umask.
-    if (opts.out) writeFileSync(opts.out, text + '\n', { mode: 0o600 }); else process.stdout.write(text + '\n');
+    // A write failure is not a fetch failure, so it gets its own exit code: the
+    // catch below used to report it as 1, the same code as "a URL failed".
+    if (opts.out) {
+      try {
+        writeFileSync(opts.out, text + '\n', { mode: 0o600 });
+      } catch (err) {
+        process.stderr.write('fetch-page: cannot write ' + opts.out + ': ' + String((err && err.message) || err) + '\n');
+        writeError = err;
+      }
+    } else process.stdout.write(text + '\n');
   } finally {
     // Unconditional, so a throw after the fetches - an unwritable --out, say -
     // cannot leave the scratch directory and the last body file in it behind.
@@ -894,7 +917,7 @@ async function main() {
     // before a finally could run.
     if (TMP_DIR) { try { rmSync(TMP_DIR, { recursive: true, force: true }); } catch { /* scratch only */ } }
   }
-  process.exit(results.every((r) => r.ok) ? 0 : 1);
+  process.exit(writeError ? 2 : (results.every((r) => r.ok) ? 0 : 1));
 }
 
 main().catch((err) => {

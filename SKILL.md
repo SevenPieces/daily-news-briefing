@@ -180,6 +180,12 @@ node "$SKILL/scripts/collect-markets.mjs" --out "$OUT/.markets.json"
 node "$SKILL/scripts/fetch-feeds.mjs" --since <SINCE> --out "$OUT/.feeds.json"
 ~~~
 
+Both collectors exit non-zero when they collected nothing at all - every feed
+failed, or no known instrument was requested - while a partial result stays exit
+0. Check both exit codes: a failed collector is an outage to disclose in the
+coverage note, never a quiet news day, and the per-feed records in
+`.feeds.json` say which sources were lost.
+
 Markets come from Yahoo Finance (keyless), with Eastmoney as the
 cross-check for the China 10-year bond row. The feed collector returns publisher
 feeds (dated, with a description - usable as primaries) and Google News items

@@ -177,17 +177,30 @@ function headlineProblem(headline, sourceTitle) {
 const STAMP = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
 
 /**
- * Epoch ms of a window end: either an Asia/Shanghai "YYYY-MM-DD HH:MM" stamp or
- * an ISO-8601 instant, or NaN.
- *
- * The ISO form is what plan prints, and reference/research-input.md documents the
- * invocation as passing plan's own window fields straight in - refusing them made
- * the mandatory pre-Markdown gate unusable as written, and five consecutive
- * production runs (2026-10-02 … 10-06) had to invent a conversion before calling
- * it. An instant with an explicit zone is already absolute; a zone-less ISO form
- * is read as Asia/Shanghai, like the space-separated stamp.
+ * Epoch ms of an Asia/Shanghai "YYYY-MM-DD HH:MM" stamp, or NaN. This is the
+ * form a RECORD field must be written in, so it stays strict: an ISO instant is
+ * a window's currency, not a record's.
  */
 function stampMs(value) {
+  const m = STAMP.exec(String(value).trim());
+  if (!m) return NaN;
+  const [, y, mo, d, h, mi] = m;
+  if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31 || +h > 23 || +mi > 59) return NaN;
+  return Date.parse(y + '-' + mo + '-' + d + 'T' + h + ':' + mi + ':00+08:00');
+}
+
+/**
+ * Epoch ms of a WINDOW end: the local stamp above, or an ISO-8601 instant.
+ *
+ * The ISO form is what plan prints, and reference/research-input.md documents
+ * the gate invocation as passing plan's own window fields straight in -
+ * refusing them made the mandatory pre-Markdown gate unusable as written, and
+ * five consecutive production runs (2026-10-02 … 10-06) had to invent a
+ * conversion before they could call it. An instant with an explicit zone is
+ * already absolute; a zone-less ISO form is read as Asia/Shanghai, like the
+ * space-separated stamp.
+ */
+function windowMs(value) {
   const text = String(value).trim();
   const iso = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/.exec(text);
   if (iso) {
@@ -196,11 +209,7 @@ function stampMs(value) {
     const ms = Date.parse(iso[6] ? text : text + '+08:00');
     return Number.isFinite(ms) ? ms : NaN;
   }
-  const m = STAMP.exec(text);
-  if (!m) return NaN;
-  const [, y, mo, d, h, mi] = m;
-  if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31 || +h > 23 || +mi > 59) return NaN;
-  return Date.parse(y + '-' + mo + '-' + d + 'T' + h + ':' + mi + ':00+08:00');
+  return stampMs(text);
 }
 
 /**
@@ -211,7 +220,7 @@ function stampMs(value) {
 function localStamp(value) {
   const text = String(value).trim();
   if (STAMP.test(text)) return text;
-  const ms = stampMs(text);
+  const ms = windowMs(text);
   if (!Number.isFinite(ms)) return text;
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -314,8 +323,8 @@ function recordProblems(rec, window) {
 
   if (isFilled(rec.publishedAt) && window) {
     const at = stampMs(rec.publishedAt);
-    const since = stampMs(window.since);
-    const until = stampMs(window.until);
+    const since = windowMs(window.since);
+    const until = windowMs(window.until);
     if (!Number.isNaN(at) && !Number.isNaN(since) && at < since) {
       add('publishedAt', rec.publishedAt + ' is before the window start ' + window.since);
     }
@@ -365,10 +374,10 @@ function main() {
   if (window && (!isFilled(window.since) || !isFilled(window.until))) window = null;
   // Normalise once, so the summary line and every per-record message quote the
   // same local form the records are written in, whatever the caller passed.
-  if (window && !Number.isNaN(stampMs(window.since)) && !Number.isNaN(stampMs(window.until))) {
+  if (window && !Number.isNaN(windowMs(window.since)) && !Number.isNaN(windowMs(window.until))) {
     window = { since: localStamp(window.since), until: localStamp(window.until) };
   }
-  if (window && (Number.isNaN(stampMs(window.since)) || Number.isNaN(stampMs(window.until)))) {
+  if (window && (Number.isNaN(windowMs(window.since)) || Number.isNaN(windowMs(window.until)))) {
     process.stderr.write('check-research: window ends must be "YYYY-MM-DD HH:MM" (Asia/Shanghai) or an ISO-8601 instant such as the plan JSON prints\n');
     process.exit(2);
   }

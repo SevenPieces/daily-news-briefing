@@ -216,3 +216,39 @@ test('the renderer and check-provenance agree on the story count of the standard
   // claim a different number of stories than the gate had just verified.
   assert.equal(payload.storyLines, Number(m[1]));
 });
+
+test('the aspects figure counts contract aspects, not Coverage-note sub-headings (L9)', (t) => {
+  // Runtime finding 2026-10-01, 10-02, 10-04: every h3 renders as a collapsible
+  // block, and the reported figure counted them all, so the Coverage note's own
+  // allowed '### Additional notes / 补充说明' made a 14-aspect briefing report 15.
+  const dir = tempDir(t);
+  const withNote = join(dir, 'with-note.md');
+  writeText(withNote, briefing({ coverageSubheading: true }));
+  const withoutNote = join(dir, 'without-note.md');
+  writeText(withoutNote, briefing({ coverageSubheading: false }));
+
+  // Each variant needs its own output path: render() always writes
+  // dir/briefing.html, so the second call would overwrite the first.
+  const outA = join(dir, 'with-note.html');
+  const outB = join(dir, 'without-note.html');
+  const resA = runScript(SCRIPT, [withNote, '--out', outA]);
+  const resB = runScript(SCRIPT, [withoutNote, '--out', outB]);
+  assert.equal(resA.status, 0, resA.stderr);
+  assert.equal(resB.status, 0, resB.stderr);
+  const aspectsA = jsonOf(resA.stdout).aspects;
+  const aspectsB = jsonOf(resB.stdout).aspects;
+
+  // Guard the premise: the note really is present in one and absent in the other.
+  assert.match(readText(withNote), /### Additional notes/);
+  assert.doesNotMatch(readText(withoutNote), /### Additional notes/);
+
+  // The contract aspect count is the same either way...
+  assert.equal(aspectsA, aspectsB);
+  assert.equal(aspectsA, 4, 'the fixture has Economy, Politics, 经济 and 时政');
+  // ...and the note still renders as a collapsible block, with its own unique id.
+  const html = readText(outA);
+  assert.match(html, /Additional notes/);
+  const ids = [...html.matchAll(/<details class="aspect" id="(a\d+)"/g)].map((m) => m[1]);
+  assert.equal(ids.length, 5, 'four aspects plus the note block');
+  assert.equal(new Set(ids).size, ids.length, 'every block id is unique');
+});

@@ -287,8 +287,43 @@ test('a bad --window exits 2', (t) => {
 
   const unparseable = runScript(SCRIPT, [file, '--window', 'yesterday', 'tomorrow']);
   assert.equal(unparseable.status, 2);
-  assert.match(unparseable.stderr, /window ends must be YYYY-MM-DD HH:MM/);
+  assert.match(unparseable.stderr, /window ends must be/);
+  // The refusal names both forms it accepts, so a run does not have to guess.
+  assert.match(unparseable.stderr, /YYYY-MM-DD HH:MM/);
+  assert.match(unparseable.stderr, /ISO-8601 instant/);
   assert.equal(unparseable.stdout, '');
+});
+
+test('the window may be given as the ISO instants the documented invocation passes (H3)', (t) => {
+  // Runtime finding 2026-10-02 … 10-06: research-input.md tells the run to pass
+  // plan's own window fields, which are ISO-8601, while the gate accepted only
+  // "YYYY-MM-DD HH:MM" - so the mandatory pre-Markdown gate was unusable as
+  // documented and five runs had to invent a conversion.
+  const dir = tempDir(t);
+  const file = writeJson(join(dir, 'report.json'), [record({ publishedAt: '2026-09-29 09:30' })]);
+
+  const iso = runScript(SCRIPT, [file, '--window', '2026-09-29T00:30:35.585Z', '2026-09-29T07:58:28.269Z']);
+  assert.equal(iso.status, 0, iso.stdout + iso.stderr);
+  assert.match(iso.stdout, /RESEARCH: OK/);
+
+  // A zone-less ISO instant is read as Asia/Shanghai, like the space form.
+  const bare = runScript(SCRIPT, [file, '--window', '2026-09-29T08:30', '2026-09-29T15:58']);
+  assert.equal(bare.status, 0, bare.stdout + bare.stderr);
+
+  // Whichever form is passed, the summary and the per-record messages quote the
+  // local form the records are written in.
+  assert.match(iso.stdout, /window 2026-09-29 08:30 -> 2026-09-29 15:58/);
+  const outside = writeJson(join(dir, 'outside.json'), [record({ publishedAt: '2026-09-29 06:00' })]);
+  const refused = runScript(SCRIPT, [outside, '--window', '2026-09-29T00:30:35.585Z', '2026-09-29T07:58:28.269Z']);
+  assert.equal(refused.status, 1);
+  assert.match(refused.stdout, /is before the window start 2026-09-29 08:30/);
+
+  // The record's own field stays strict: a window may be an instant, a record
+  // may not. This is the regression the ISO change first introduced.
+  const recordIso = writeJson(join(dir, 'record-iso.json'), [record({ publishedAt: '2026-09-29T09:30' })]);
+  const strict = runScript(SCRIPT, [recordIso]);
+  assert.equal(strict.status, 1);
+  assert.match(strict.stdout, /publishedAt: not YYYY-MM-DD HH:MM \(Asia\/Shanghai\)/);
 });
 
 test('a headline differing only by a trailing outlet name is accepted', (t) => {

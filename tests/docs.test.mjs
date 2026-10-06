@@ -6,9 +6,9 @@
 // nowhere.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SKILL_ROOT } from './helpers.mjs';
+import { SKILL_ROOT, runScript, tempDir } from './helpers.mjs';
 
 const DOCS = ['SKILL.md', 'README.md', 'reference/state-schema.md', 'reference/sources.md',
   'reference/research-input.md', 'reference/output-contract.md', 'reference/feasibility.md'];
@@ -74,4 +74,38 @@ test('the two gates and the indexer are documented where the workflow runs them'
     assert.ok(new RegExp('node "\\$SKILL/scripts/' + script.replace('.', '\\.') + '"').test(skill),
       'SKILL.md never shows how to run ' + script);
   }
+});
+
+test('the documented pre-Markdown invocation runs with the window plan actually prints (H3)', (t) => {
+  // Runtime finding, five consecutive days: research-input.md documented the gate
+  // invocation as passing plan's window fields straight in, and those are
+  // ISO-8601 instants, while the gate accepted only the local stamp - so a run
+  // that followed the text literally got exit 2 from its mandatory gate. This
+  // test executes the documented command with a real plan-style window.
+  const doc = readFileSync(join(SKILL_ROOT, 'reference', 'research-input.md'), 'utf8');
+  const invocation = doc.split('\n')
+    .find((line) => line.includes('check-research.mjs') && line.includes('--window'));
+  assert.ok(invocation, 'research-input.md no longer documents the gate invocation');
+  assert.ok(invocation.includes('--window "<SINCE>" "<UNTIL>"'),
+    'the documented invocation must name the two window arguments the run substitutes');
+
+  const dir = tempDir(t);
+  const report = join(dir, 'records.json');
+  writeFileSync(report, JSON.stringify([{
+    section: 'global', aspect: 'Economy', headline: 'A headline', sourceTitle: 'A headline',
+    outlet: 'BBC', primaryUrl: 'https://www.bbc.co.uk/news/a', publishedAt: '2026-10-06 09:30',
+    dateSource: 'datePublished', provenance: 'full', textLength: 900, flags: ['new'], keyFacts: ['a fact'],
+  }], null, 1));
+
+  // Exactly what plan prints and the document tells the run to copy.
+  const res = runScript('check-research.mjs', [report,
+    '--window', '2026-10-06T00:30:35.585Z', '2026-10-06T07:58:28.269Z']);
+  assert.equal(res.status, 0, 'the documented invocation must be usable as written:\n' + res.stdout + res.stderr);
+  assert.match(res.stdout, /RESEARCH: OK/);
+  assert.match(res.stdout, /window 2026-10-06 08:30 -> 2026-10-06 15:58/,
+    'the gate echoes the window in the local form the records are written in');
+  // And the document says where those values come from, so the run does not
+  // hand-convert them or invent a window the plan never announced.
+  assert.ok(/Step 2's .window\.since. and .window\.until. copied/.test(doc),
+    'the document must say the values are plan\'s own window fields');
 });

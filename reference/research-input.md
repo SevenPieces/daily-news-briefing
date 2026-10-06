@@ -125,7 +125,9 @@ coverage note can say so honestly:
   an overlap counts its requests twice, as the run really spent them. The live
   2026-09-30 ledger recorded 24 distinct URLs, one of which cost 12 requests; the
   ledger keys around these fields (`window`, `target`, `allowanceBreakdown`,
-  `failures`, `unionNote`, `gates`, `blockedWireResolutions`) are unchanged.
+  `failures`, `unionNote`, `gates`, `blockedWireResolutions`, `archiveAttempts`)
+  are unchanged; `blockedWireResolutions` and `archiveAttempts` are written as
+  empty arrays when the run probed nothing - never omitted, never null.
 - **Archive attempts** - every blocked wire URL probed for a snapshot and what
   each probe answered, so Step 4b's archive rule leaves a trace. Either probe
   counts: the `https://web.archive.org/web/2/<url>` read or the

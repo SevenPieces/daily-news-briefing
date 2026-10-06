@@ -10,7 +10,7 @@
 | .markets.json | run artifact: the market collector's rows, kept in the output directory |
 | .feeds.json | run artifact: the feed collector's output, kept in the output directory |
 | .items.json | run artifact: the parsed item index, written by md-to-items.mjs, kept in the output directory |
-| .fetch-ledger.json | run artifact: every article-page URL the run fetched, with the per-agent split and the union, written by the agent (reference/research-input.md), kept in the output directory |
+| .fetch-ledger.json | run artifact: every article-page URL the run fetched, with the per-agent split and the union, written by the agent (reference/research-input.md), kept in the output directory. It also records the blocked-wire resolutions and the archive attempts as `blockedWireResolutions` and `archiveAttempts`; an empty array is the shape when the run probed nothing - never omitted, never null |
 
 Deliver only the HTML. Keep the Markdown, the state and the run artifacts
 (`.markets.json`, `.feeds.json`, `.items.json`, `.fetch-ledger.json`) on disk.
@@ -86,6 +86,10 @@ Every story is exactly one Markdown list item:
   `[find:OUTLET](SEARCH_URL)` repeats that URL so the badge says search rather
   than article:
   `[src:Reuters 2026-09-10 09:30](https://www.google.com/search?q=HEADLINE) #unverified [find:Reuters](https://www.google.com/search?q=HEADLINE) [prov:link]`
+- Strip tracking query strings from a cited URL - the `?at_medium=RSS` a feed
+  appends is not part of the address - and keep the parameters the URL needs to
+  resolve at all, as a search URL does. Strip to the publisher's own canonical
+  form, never to a different page.
 - A URL containing `)` is truncated at the first `)` by both `md-to-items.mjs` and
   `render-html.mjs`, so the index stays faithful to the delivered link; prefer a
   primary URL without parentheses.
@@ -109,7 +113,9 @@ Every story is exactly one Markdown list item:
   `scripts/update-state.mjs` never writes either flag.
 - **Cite the publisher's headline verbatim.** Do not reword, translate or trim
   it. The headline is evidence, and a reworded one no longer matches what the
-  reader finds at the link.
+  reader finds at the link; a Watchlist line's "what is unresolved" is the
+  summary that follows the verbatim headline, never a rewording of the headline
+  itself.
 - **Tag placement.** `#tags` normally precede `[prov:*]`. Trailing tags after
   the marker are also accepted by the provenance gate, so both of these pass:
 
@@ -120,7 +126,9 @@ Every story is exactly one Markdown list item:
   development inside the window.** A briefing lists a watchlist title only when
   it moved inside the window; retention in the state's watchlist is not a report
   (see `reference/state-schema.md`). A story with no movement in this run does
-  not appear; older background is omitted, not smuggled in. A Watchlist line
+  not appear; older background is omitted, not smuggled in. Hong Kong, Taiwan and
+  Macau material goes to the China section wherever it sits, so a Watchlist
+  entry about Greater China is not a placement exception. A Watchlist line
   uses the language of the story's own reporting - English for a Global outlet,
   Chinese for a Chinese one - while the section label stays bilingual.
 
@@ -147,7 +155,9 @@ those words did not come from the cited page's own body as read.
 The renderer makes every **headline a link** to its primary source and adds a
 "原文 / Original ↗" link to any item tagged #paywalled or #unverified. Never
 paraphrase locked body text: for #paywalled items use only the publisher's own
-feed title/description.
+feed title/description. When the feed carries no description for that item - a
+Bloomberg row on 2026-10-02 had none - the title alone is the summary: keep the
+tag, and disclose headline-only in the coverage note.
 
 ## Market snapshot formatting
 
@@ -157,8 +167,9 @@ collector's `changeBp` field (for example `+3.1 bp`). Write `n/a` when a
 source publishes no change.
 
 Include every instrument the collector returns, in the collector order - never
-hand-pick a subset, so the table does not vary from day to day. Close the table
-with this note, quoted verbatim:
+hand-pick a subset, so the table does not vary from day to day. The Market cell
+is the collector's own label verbatim, never a house-styled or shortened one.
+Close the table with this note, quoted verbatim:
 
     (Values from the collector APIs, each row with its own as-of time in Asia/Shanghai. Yields are quoted in basis points: changeBp is the move in percentage points x 100.)
 
@@ -179,7 +190,11 @@ foreign-language edition (`jp.news.cn`, `en.news.cn` and the like) is not the
 China source, however directly it carries the story.
 
 Both sections use the same aspect order. Structural labels (Top stories, Market
-snapshot, Watchlist, Coverage note, Sources) are bilingual. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China. This rule takes precedence over the placement tie-break below: a story **about** Hong Kong, Taiwan or Macau belongs to the China section wherever the event happens, so the place-of-event test decides only the cross-border stories this rule does not already assign (for example, US-China trade decided in Washington stays in Global).
+snapshot, Watchlist, Coverage note, Sources) are bilingual. The China section covers the mainland plus Hong Kong, Taiwan and Macau, and includes city-level stories when they are worth noting. All Hong Kong, Taiwan and Macau stories belong in the China section, including those involving a foreign power, because they are parts of China. A republication of the same originating body
+does not count as a second outlet - a 央广网 page reprinting 央视新闻 is one
+outlet, not two - because it corroborates nothing the page's own producer did
+not publish, and labelling it otherwise is the relabel the story grammar
+forbids. This rule takes precedence over the placement tie-break below: a story **about** Hong Kong, Taiwan or Macau belongs to the China section wherever the event happens, so the place-of-event test decides only the cross-border stories this rule does not already assign (for example, US-China trade decided in Washington stays in Global).
 
 **Placement tie-break.** The place the event happens decides the section. A
 Global outlet covering a China-subject policy story whose decision is made
@@ -191,63 +206,84 @@ see why a story sits where it does.
 ## Coverage note
 
 The coverage note has a **fixed part** and a **variable part**. The fixed part
-must contain the items below. Provenance counts are per story line, so they
-equal the number of stories in the briefing when no story line is repeated.
+must contain the items below, each stated as one short line - no explanation, no
+justification, no method note. Provenance counts are per story line, so they equal
+the number of story lines when no line is repeated.
 
 - the header window **verbatim** - the parenthesised window in the metadata line
   is copied character for character, with the same dates, times and zone. That
   window is a string, not a sentence: the note may state it inside a sentence of
   its own if the string itself is unchanged;
-- the item provenance counts - how many story lines came from each of full,
-  feed and link. Run `scripts/check-provenance.mjs`, read its own first line
-  (`story lines: N | full: F | feed: E | link: L`) and copy the three marker
-  figures into the note. Never count them by grepping the file for `[prov:...]`:
+- the item provenance counts - how many story lines came from each of full, feed
+  and link. Run `scripts/check-provenance.mjs` and copy the three marker figures
+  from its own first line. Never count them by grepping the file for the marker:
   the Coverage note's own prose quotes the marker, so a text search over-counts.
-  On 2026-09-30 the note wrote "a paywalled [prov:feed] line" and a grep returned
-  18 full / 7 feed / 1 link against the gate's 18 full / 6 feed / 1 link; on
-  2026-09-29 the note wrote "verified ([prov:full])" and a grep returned
-  25 / 0 / 0 against the gate's 24 / 0 / 0. The surplus is the note's own words,
-  not a story. Confirm the gate's figures before `update`: `.items.json` carries
-  no provenance split, and the gate can only read a note that is already in the
-  file. If the note and the gate disagree, correct the note and re-run
-  `md-to-items` and both gates - safe only while `update` has not run. The gate's
-  figure is the one the reader can reproduce, because it counts as this contract
-  defines a story line: every non-indented `- ` bullet in `## Top stories`,
-  `## Global`, `## China` and `## Watchlist` that carries a `[src:...]` reference
-  or opens with a bold headline. Bullets in the Market snapshot, the Coverage note
-  and the Sources are not story lines, and an indented bullet is never one. Count
-  story lines, not distinct stories: a line printed twice -
-  a Top story that is also shown in its aspect - is counted twice, and a
-  Watchlist entry is a story line for these counts even though it is an
-  unresolved developing story. Repeating a story is the writer's choice, never a
-  requirement, so never duplicate a story to move the counts;
+  On 2026-09-30 a grep returned 18 full / 7 feed / 1 link against the gate's
+  18 / 6 / 1; on 2026-09-29 it returned 25 / 0 / 0 against 24 / 0 / 0. The surplus
+  is the note's own words, not a story. The gate's figure is the one the reader
+  can reproduce, because it counts a story line as this contract defines one:
+  every non-indented `- ` bullet in `## Top stories`, `## Global`, `## China` and
+  `## Watchlist` that carries a `[src:...]` reference or opens with a bold
+  headline - bullets in the Market snapshot, the Coverage note and the Sources
+  are not story lines, and an indented bullet is never one. A line printed twice
+  is two story lines, and a Watchlist entry is a story line here even though it
+  is an unresolved developing story. A Watchlist entry does not count toward the
+  20-25 distinct stories: it is a story the run already counted, unresolved and
+  printed again - and repeating a story is the writer's choice, never a
+  requirement, so never duplicate a story to move the counts. If the note and the
+  gate disagree, correct the note and re-run `md-to-items` and both gates - safe only
+  while `update` has not run;
 - the fetch count - how many distinct **article-page** fetches the run made (one
   per URL, however many HTTP requests the retries cost), against the 20-30
   target, which stays guidance and not a gate. The count is by URL, never by
   request: a URL that exhausted all eight attempts counts once. The request cost
   behind it is recorded separately as `requests` in `.fetch-ledger.json` (see
-  `reference/research-input.md`), so a URL count that looks modest next to a
-  slow run can be reconciled, and state it in the variable part of the note when
-  the run is near the top of the band - one unresponsive URL can cost eight
-  requests and up to 8 x `--timeout`. The deterministic collectors'
-  polls - the feed URLs in `.feeds.json` and the market instruments in
-  `.markets.json` - are not article-page fetches and are not part of this count;
+  `reference/research-input.md`), so state the URL count and the request count
+  together in the variable part when the run is near the top of the band - one
+  unresponsive URL can cost eight requests and up to 8 x `--timeout`. Discovery
+  index and section pages are not article-page fetches, and neither are the
+  deterministic collectors' polls - the feed URLs in `.feeds.json` and the market
+  instruments in `.markets.json`;
 - the section-placement disclosure - any call made under the tie-break above;
 - the quiet aspects - every aspect with no significant news, named rather than
   silently omitted;
 - the stale-data explanation - any market row whose as-of time is older than the
-  run, and why.
+  run, and why;
+- other disclosures - a paywalled item summarized from its headline alone because
+  its feed carried no description, and any archive attempt.
 
-The two gates count different things, and their figures are not interchangeable.
+For brevity a label with a number carries the meaning alone, and the fixed part in
+that shape is:
+
+    Story lines: 31 | full: 23 | feed: 8 | link: 0.
+    Fetches: 42 URLs / 56 requests (guidance 20-30).
+    Quiet: China 科技 (无重大新闻).
+    Stale rows: CSI 300, Shanghai Composite, Shenzhen Component (2026-09-30 close, holiday).
+    Blocked: Bloomberg pages 403, cited from its own RSS, two headline-only.
+
+The variable part is at most one or two short sentences - a capped window, a
+blocked wire whose canonical URL could not be resolved, a licence gate, two
+reports in conflict. An additional-notes block is allowed under the same rule,
+which is wording too: one short line, not a paragraph.
+
+Run mechanics do not belong in the note: per-URL or per-agent fetch bookkeeping,
+duplicate-count arithmetic, date-source label inventories, archive no-ops and
+tie-break reasoning restated from the run report all belong in the run report and
+the ledger. The note's prose never quotes marker syntax - `[prov:...]`, `[src:]`,
+`[alt:]`, `[find:]` - which also feeds the over-count trap above; name what a line
+stands on in words. Marker syntax is also what a gate reads as a story-shaped
+bullet, so quoting it in the note's prose is a defect a gate can catch.
+
+Two gates count different things, and their figures are not interchangeable.
 `scripts/check-diversity.mjs` counts only the `## Global` and `## China` story
 lines, so its per-section figures leave out the Top stories and the Watchlist -
 it asks whether each section draws on more than one outlet, and a Top story is
 already counted under its aspect. `scripts/check-provenance.mjs` counts every
 story line - Top stories, both sections and the Watchlist - and its `story lines`
-figure is the one the coverage note follows and the one defined above. Both count
-a non-indented `- ` bullet only; neither counts a bullet in the Market snapshot,
-the Coverage note or the Sources. A Top story repeated in its aspect is two lines
-for `check-provenance.mjs` and one for `check-diversity.mjs`, which sees only the
+figure is the one the coverage note follows. Both count a non-indented `- ` bullet
+only; neither counts a bullet in the Market snapshot, the Coverage note or the
+Sources. A Top story repeated in its aspect is two lines for
+`check-provenance.mjs` and one for `check-diversity.mjs`, which sees only the
 aspect copy.
 
 Both gates refuse a briefing whose structure they cannot account for, rather than
@@ -262,10 +298,6 @@ The note is paragraphs. Its one optional sub-heading is
 that read better in Chinese; both gates refuse any other sub-heading there and
 refuse a story-shaped bullet anywhere in the note. A run used
 `### Additional notes / 补充说明` on 2026-09-30, which nothing policed before.
-
-The variable part is free: add anything else the run judges worth noting (a
-capped window, a licence gate that blocked a wire, two reports in conflict). Keep
-it short and plain.
 
 ## HTML features
 

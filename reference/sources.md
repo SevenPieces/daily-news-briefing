@@ -8,34 +8,43 @@ before promoting a new outlet to Tier 1.
 These pages were fetched successfully (HTTP 200 with usable
 content) and may be cited as the primary link.
 
-| Outlet | Domain | Section | Notes |
+| Label | Domain | Section | Notes |
 |---|---|---|---|
 | BBC | bbc.com, bbc.co.uk | Global | RSS works and carries pubDate |
 | The Guardian | theguardian.com | Global | article pages answer HTTP 200 but the 1500-character excerpt is chrome only (5 of 5 fetches, printed textLength 7330-9675, 2026-09-30), so a Guardian item is `[prov:feed]` from the Guardian's own RSS unless the body is obtained another way |
 | Al Jazeera | aljazeera.com | Global | |
 | Nikkei Asia | asia.nikkei.com | Global, Business | |
 | SCMP | scmp.com | China, Global | curl is 403 but web_fetch is 200; use web_fetch |
-| Xinhua | news.cn | China | RSS is stale, use HTML; article pages answer 200 with a date-only `<meta name="publishdate">`, so `publishedAt` must come from a dated element in the body (probe 2026-09-30) |
-| 央广网 (CNR) | cnr.cn | China | article pages answer 200 with a date-only `<meta name="publishdate">`, so `publishedAt` must come from a dated element in the body (probe 2026-09-30) |
-| State Council | gov.cn | China | |
-| National Bureau of Statistics | stats.gov.cn | China, Economy | |
-| People's Bank of China | pbc.gov.cn | China, Economy | use https, not http |
-| Caixin | caixin.com | China, Economy | partly paywalled |
-| Yicai | yicai.com | China, Business | |
-| The Paper | thepaper.cn | China, Social | |
-| CLS | cls.cn | China, Economy | fast wire |
-| STCN | stcn.com | China, Business | |
-| 光明网 (Guangming) | gmw.cn, politics.gmw.cn, m.gmw.cn | China | curl 200; homepage is a live dated index; no RSS; article pages answer 200 (re-probe 2026-09-30: 32294 bytes, textLength 5555) and their own `meta:publishdate` is date-only, so the clock time has to come from the body - `fetch-page.mjs` reads the body's dated stamp and prints `dateSource: body:text` with `publishedAt: "2026-09-18 11:15"` (the body carries `2026-09-18 11:15`), which is the only clock time the page offers |
-| 香港政府新闻网 (HK Government News) | news.gov.hk | China (Hong Kong) | curl 200; static dated article pages are the primary; no fetchable RSS and no static dated index - discover via web_search (probe 2026-09-18) |
-| 中华人民共和国国防部 (MND) | mod.gov.cn | China, Military | **http only** - the https form fails to connect (`status 0`), so always fetch `http://`; article pages answer 200 with a date-only `meta:publishdate`, so `publishedAt` must come from a dated element; the registry's primary for the 军事 aspect (probe 2026-09-30) |
+| 新华网 | news.cn | China | (Xinhua) RSS is stale, use HTML; article pages answer 200 with a date-only `<meta name="publishdate">`, so `publishedAt` must come from a dated element in the body (probe 2026-09-30) |
+| 央广网 | cnr.cn | China | (CNR) article pages answer 200 with a date-only `<meta name="publishdate">`, so `publishedAt` must come from a dated element in the body (probe 2026-09-30) |
+| 中国政府网 | gov.cn | China | (State Council) cited under this label on three days (2026-10-02, 2026-10-03, 2026-10-06) from both `https://` and `http://` article URLs |
+| 国家统计局 | stats.gov.cn | China, Economy | (NBS) |
+| 中国人民银行 | pbc.gov.cn | China, Economy | (PBoC) use https, not http |
+| 财新 | caixin.com | China, Economy | (Caixin) partly paywalled |
+| 第一财经 | yicai.com | China, Business | (Yicai) cited under this label (2026-10-06) |
+| 澎湃新闻 | thepaper.cn | China, Social | (The Paper) cited under this label (2026-10-02); also the page that carries a ministry release when the ministry site itself has no fetchable in-window page (2026-10-02) |
+| 财联社 | cls.cn | China, Economy | (CLS) fast wire |
+| 证券时报 | stcn.com | China, Business | (STCN) cited under this label (2026-10-01, 2026-10-02) |
+| 光明网 | gmw.cn, politics.gmw.cn, m.gmw.cn | China | (Guangming) curl 200; homepage is a live dated index; no RSS; article pages answer 200 (re-probe 2026-09-30: 32294 bytes, textLength 5555) and their own `meta:publishdate` is date-only, so the clock time has to come from the body - `fetch-page.mjs` reads the body's dated stamp and prints `dateSource: body:text` with `publishedAt: "2026-09-18 11:15"` (the body carries `2026-09-18 11:15`), which is the only clock time the page offers |
+| 香港政府新闻网 | news.gov.hk | China (Hong Kong) | (HK Government News) curl 200; static dated article pages are the primary; no fetchable RSS and no static dated index - discover via web_search (probe 2026-09-18) |
+| 中华人民共和国国防部 | mod.gov.cn | China, Military | (MND) **http only** - the https form fails to connect (`status 0`), so always fetch `http://`; article pages answer 200 with a date-only `meta:publishdate`, so `publishedAt` must come from a dated element; the registry's primary for the 军事 aspect (probe 2026-09-30) |
+| 外交部 | fmprc.gov.cn | China, Foreign affairs | (MOFA) an article page answered HTTP 200 on its first attempt (run gate note, 2026-10-01); no fetchable in-window page carried the 2026-10-02 release, which that run cited at a 澎湃新闻 URL (2026-10-02) |
+| 国务院台办 | gwytb.gov.cn | China, Taiwan | (Taiwan Affairs Office) an article page answered HTTP 200 on its first attempt (run gate note, 2026-10-01) |
+| 中国军网 | 81.cn, www.81.mil.cn | China, Military | (China Military Online) the cited article was fetched over `http://` (2026-10-02), as with MND above; the https form is unverified |
+| 经济日报 | jingjiribao.cn | China, Economy | (Economic Daily) cited `[prov:full]` over `http://` (2026-10-02); the https form is unverified |
+| 中国经济网 | ce.cn | China, Economy | (China Economic Net) cited `[prov:full]` (2026-10-02); a 新华财经早报 front page carries only a date-only field and was dropped as unplaceable (2026-10-02) |
+| 上海证券报 | cnstock.com | China, Business | (Shanghai Securities News) cited `[prov:full]` (2026-10-02) |
 
 **One outlet, one label.** `check-diversity.mjs` compares the `[src:]` label as a
-raw string, so cite each publisher under the single form the registry gives it,
-not the variant the page happens to show. The Chinese state publishers are the
-clear case: news.cn is cited as `新华网` whether the page's own source line reads
-新华网 or 新华社, and the wire's English name (Xinhua) is not a third outlet - three
-spellings of one publisher would count as three outlets and hide a section that
-really does rest on one.
+raw string, so a story line prints the `Label` cell of the row it cites, character
+for character - never the English name in the notes, never the variant the page
+itself shows. A Chinese state or mainland row labels in Chinese (`新华网` for
+news.cn, `中国政府网` for gov.cn, `中国人民银行` for pbc.gov.cn, `第一财经` for
+yicai.com, `澎湃新闻` for thepaper.cn); a row labelled in English (`SCMP`) is cited
+in English. Xinhua shows the cost of a second spelling: the page's own source line
+reads 新华网 or 新华社 and the wire is also called Xinhua, so three spellings of one
+publisher would count as three outlets and hide a section that really does rest on
+one.
 
 ## Publisher RSS primaries (dated, citable)
 
@@ -45,7 +54,7 @@ from a publisher feed is a valid primary: cite link + pubDate, write the summary
 from the feed's own description, and never paraphrase locked body text. Tag
 subscription outlets #paywalled.
 
-| Outlet | Feeds | Note |
+| Label | Feeds | Note |
 |---|---|---|
 | Bloomberg | markets, economics, politics, technology (`feeds.bloomberg.com/<section>/news.rss`) | subscription; #paywalled |
 | The New York Times | World, Politics, Business, Technology (`rss.nytimes.com/services/xml/rss/nyt/*.xml`) | article pages returned a hard HTTP 403 on every profile and both transports (8 attempts, 2026-09-30), a blocked wire's shape rather than a meter; its items come from NYT's own RSS as `[prov:feed]` - the blocked-wire treatment (AP/Reuters/FT/WSJ) minus the alt-link rule, since NYT publishes its own RSS; #paywalled |

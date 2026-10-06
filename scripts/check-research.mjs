@@ -176,13 +176,48 @@ function headlineProblem(headline, sourceTitle) {
 
 const STAMP = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
 
-/** Epoch ms of an Asia/Shanghai "YYYY-MM-DD HH:MM" stamp, or NaN. */
+/**
+ * Epoch ms of a window end: either an Asia/Shanghai "YYYY-MM-DD HH:MM" stamp or
+ * an ISO-8601 instant, or NaN.
+ *
+ * The ISO form is what plan prints, and reference/research-input.md documents the
+ * invocation as passing plan's own window fields straight in - refusing them made
+ * the mandatory pre-Markdown gate unusable as written, and five consecutive
+ * production runs (2026-10-02 … 10-06) had to invent a conversion before calling
+ * it. An instant with an explicit zone is already absolute; a zone-less ISO form
+ * is read as Asia/Shanghai, like the space-separated stamp.
+ */
 function stampMs(value) {
-  const m = STAMP.exec(String(value));
+  const text = String(value).trim();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/.exec(text);
+  if (iso) {
+    if (+iso[2] < 1 || +iso[2] > 12 || +iso[3] < 1 || +iso[3] > 31
+        || +iso[4] > 23 || +iso[5] > 59) return NaN;
+    const ms = Date.parse(iso[6] ? text : text + '+08:00');
+    return Number.isFinite(ms) ? ms : NaN;
+  }
+  const m = STAMP.exec(text);
   if (!m) return NaN;
   const [, y, mo, d, h, mi] = m;
   if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31 || +h > 23 || +mi > 59) return NaN;
   return Date.parse(y + '-' + mo + '-' + d + 'T' + h + ':' + mi + ':00+08:00');
+}
+
+/**
+ * The Asia/Shanghai "YYYY-MM-DD HH:MM" form of a window end, so every message
+ * this gate prints is in the same language the records are written in, whatever
+ * form the caller passed. A value that is already local is returned unchanged.
+ */
+function localStamp(value) {
+  const text = String(value).trim();
+  if (STAMP.test(text)) return text;
+  const ms = stampMs(text);
+  if (!Number.isFinite(ms)) return text;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(ms)).reduce((a, p) => (a[p.type] = p.value, a), {});
+  return parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + ':' + parts.minute;
 }
 
 function isFilled(value) {
@@ -328,8 +363,13 @@ function main() {
   }
   let window = opts.window || (report && !Array.isArray(report) && report.window) || null;
   if (window && (!isFilled(window.since) || !isFilled(window.until))) window = null;
+  // Normalise once, so the summary line and every per-record message quote the
+  // same local form the records are written in, whatever the caller passed.
+  if (window && !Number.isNaN(stampMs(window.since)) && !Number.isNaN(stampMs(window.until))) {
+    window = { since: localStamp(window.since), until: localStamp(window.until) };
+  }
   if (window && (Number.isNaN(stampMs(window.since)) || Number.isNaN(stampMs(window.until)))) {
-    process.stderr.write('check-research: window ends must be YYYY-MM-DD HH:MM\n');
+    process.stderr.write('check-research: window ends must be "YYYY-MM-DD HH:MM" (Asia/Shanghai) or an ISO-8601 instant such as the plan JSON prints\n');
     process.exit(2);
   }
 

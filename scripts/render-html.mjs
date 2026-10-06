@@ -200,7 +200,8 @@ let inList = false;
 let inPlain = false;
 let tableRows = [];
 let secIndex = -1;
-let aspIndex = -1;
+let aspIndex = -1;      // unique id and count key for every h3, aspects and notes alike
+let aspectCount = 0;    // contract aspects only: h3 under Global or China
 let currentAspect = '';
 let currentSection = '';
 let storyIndex = 0;
@@ -249,6 +250,11 @@ for (const raw of lines) {
   if (line.startsWith('### ')) {
     closeDetails(); flushTable();
     aspIndex++;
+    // The Coverage note's one allowed '### Additional notes / 补充说明' renders as
+    // a collapsible block like an aspect, and counting it made the report print
+    // aspects: 15 for the contract's 14 (2026-10-01, 10-02, 10-04). The id
+    // counter still advances for every heading, so ids stay unique.
+    if (sectionOf(currentSection) === 'global' || sectionOf(currentSection) === 'china') aspectCount++;
     const name = line.slice(4).trim();
     currentAspect = 'c' + aspIndex;
     counts[currentAspect] = counts[currentAspect] || 0;
@@ -386,4 +392,4 @@ writeFileSync(outPath, doc, { mode: 0o644 });
 // bytes is the size of the file just written, in real UTF-8 bytes. It used to
 // be String#length, which counts UTF-16 code units: right for pure ASCII,
 // wrong by thousands on a bilingual briefing (44382 reported for 46970 bytes).
-process.stdout.write(JSON.stringify({ out: outPath, bytes: Buffer.byteLength(doc, 'utf8'), storyLines: storyIndex, sections: secIndex + 1, aspects: aspIndex + 1 }) + '\n');
+process.stdout.write(JSON.stringify({ out: outPath, bytes: Buffer.byteLength(doc, 'utf8'), storyLines: storyIndex, sections: secIndex + 1, aspects: aspectCount }) + '\n');

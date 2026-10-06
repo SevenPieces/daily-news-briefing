@@ -46,6 +46,27 @@ reads 新华网 or 新华社 and the wire is also called Xinhua, so three spelli
 publisher would count as three outlets and hide a section that really does rest on
 one.
 
+**A publisher with no row still has one label.** The rule above assumes a row
+exists; this is what to do when it does not. Print the publisher's own name as the
+cited page prints it, in the section's language - the name in the page's own
+masthead or source line, not a wire's English name and not a spelling the page
+does not carry - and use that same string every time the publisher appears in the
+run. No row is needed for the run to be correct, and no run edits this file: a
+newly seen publisher is named in the run's own artifacts (its run report, and the
+coverage note's variable part when the publisher bears on coverage), and the row
+is added here by a maintainer commit when the publisher recurs or matters. That
+keeps this registry a curated, evidence-based list rather than something a run
+rewrites, and keeps a run from having to guess.
+
+Two outlets the runtime session saw but never cited as a `[src:]` primary, listed
+here only so their label is fixed before a run needs it - neither has been probed,
+and neither is a fetch-verification claim:
+
+| Label | Domain | Section | Notes |
+|---|---|---|---|
+| 央视网 | cctv.com | China | (CCTV) seen as an `[alt:]` link on 2026-10-03; not yet cited as a primary and not probed |
+| 环球时报 | globaltimes.cn | China, Foreign affairs | (Global Times) named in this document's feed prose; not yet cited as a primary and not probed |
+
 ## Publisher RSS primaries (dated, citable)
 
 These outlets' article pages are bot-blocked, but their **own RSS feeds** are

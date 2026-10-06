@@ -388,13 +388,20 @@ link). Keep the Markdown, the state JSON and the run artifacts `.markets.json`,
 `.feeds.json`, `.items.json` and `.fetch-ledger.json` in `$OUT`, but deliver only
 the HTML.
 
-The run must have written nothing outside `$OUT`, and Step 1's `.run-start` mark
-makes that measurable. The first command below lists every file under the working
-directory changed since Step 1, with `$OUT` pruned; empty output is the pass. Each
-path printed is a candidate, not a verdict: delete the ones this run wrote - they
-are scratch, and Step 1 confines scratch to `$STAGE` - and leave any this run
-cannot account for, naming it in the coverage note. This measurement runs before
-`.run-start` itself goes.
+The run must have written nothing outside `$OUT`. That is measurable with Step
+1's `.run-start` mark, and it is worth measuring exactly when the run has
+something to answer for: **run the sweep below if this run wrote any file of its
+own** - a replay, a helper script, a subagent's scratch file, a state copy, a
+downloaded page - and skip it for a run that used only the documented scripts,
+which write only where the contract says. The judge of "wrote a file of its own"
+is the run's own actions, not a guess: if you cannot say which files the run
+itself wrote, run the sweep.
+
+The command lists every file under the working directory changed since Step 1,
+with `$OUT` pruned; empty output is the pass. Each path printed is a candidate,
+not a verdict: delete the ones this run wrote - they are scratch, and Step 1
+confines scratch to `$STAGE` - and leave any this run cannot account for, naming
+it in the coverage note. This measurement runs before `.run-start` itself goes.
 
 Then delete the run's staging directory - the run's own, under Step 1's
 one-run-at-a-time rule for a shared `$OUT` - so every research scratch file goes

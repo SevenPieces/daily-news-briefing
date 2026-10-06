@@ -150,4 +150,13 @@ test('every registry row the runs cited carries one canonical [src:] label (H2)'
   }
   assert.ok(doc.includes('Label` cell of the row it cites'),
     'the document must say the Label cell is what a story line prints');
+  // The default for a publisher with no row, so a run never guesses and no run
+  // has to edit the installed skill: the page's own name in the section's
+  // language, recorded in the run's own artifacts, folded in by a maintainer.
+  assert.ok(doc.includes('A publisher with no row still has one label'),
+    'the registry must define the label for a publisher it has no row for');
+  assert.match(doc, /no run edits this file/,
+    'and it must say a run never edits the registry');
+  assert.match(doc, /added here by a maintainer commit/,
+    'and where the new row lands');
 });

@@ -43,11 +43,12 @@ function assertProblem(res, expected) {
     'missing problem line "  ' + expected + '" in:\n' + res.stdout);
 }
 
-/** Assert one warning line was printed. */
+/** Assert one warning line was printed. Each line carries its position first -
+ * "WARN 3/9" - so this matches the content that follows the counter. */
 function assertWarning(res, expected) {
   const lines = res.stdout.split('\n');
-  assert.ok(lines.includes('  WARN ' + expected),
-    'missing warning line "  WARN ' + expected + '" in:\n' + res.stdout);
+  assert.ok(lines.some((l) => /^ {2}WARN \d+\/\d+ /.test(l) && l.includes(expected)),
+    'missing warning line for "' + expected + '" in:\n' + res.stdout);
 }
 
 test('a valid record passes with exit 0 and RESEARCH: OK', (t) => {

@@ -417,7 +417,12 @@ function main() {
   console.log('research records: ' + records.length + ' | problems: ' + problems.length
     + ' | warnings: ' + warnings.length + (window ? ' | window ' + window.since + ' -> ' + window.until : ' | no window'));
   for (const p of problems) console.log('  record ' + p.index + '  ' + p.field + ': ' + p.detail);
-  for (const w of warnings) console.log('  WARN record ' + w.index + '  ' + w.detail);
+  // Numbered, so the printed count and the printed lines reconcile at a glance
+  // and a truncated or reordered capture cannot read as a complete one: runtime
+  // finding L5 saw "warnings: 9" beside seven listed lines, and nothing in the
+  // output could show which of the two was wrong.
+  warnings.forEach((w, i) => console.log('  WARN ' + (i + 1) + '/' + warnings.length
+    + '  record ' + w.index + '  ' + w.detail));
   if (records.length === 0) console.log('  note: no records - is there a research report?');
   console.log(problems.length === 0 ? 'RESEARCH: OK' : 'RESEARCH: FAIL');
   process.exit(problems.length === 0 ? 0 : 1);

@@ -20,13 +20,12 @@ estimated, or padded.
 Outputs go to `./briefings` under the working directory, or to `$BRIEFING_DIR`
 when that is set.
 
-Only the HTML is a deliverable. The agent's own writes - the Markdown and
-`.fetch-ledger.json` - land at mode `0600`; the script-written artifacts
-(`.markets.json`, `.feeds.json`, `.items.json`), `briefing-state.json` and the
-HTML follow the process umask (`0664` under a `0002` umask, `0644` under the
-common `0022`), so one run's files can differ in mode. The state and the run
-artifacts are local state, never deliverables: ship the HTML and keep the rest
-on disk.
+Only the HTML is a deliverable; `render-html.mjs` writes it `0644`. Every
+other file the scripts write - `.markets.json`, `.feeds.json`, `.items.json`
+and `briefing-state.json` - is written `0600`. A file mode is still masked by
+the process umask, so a restrictive umask can leave even the HTML owner-only.
+The state and the run artifacts are local state, never deliverables: ship the
+HTML and keep the rest on disk.
 
 ## Requirements
 
@@ -125,6 +124,7 @@ node "$SKILL/scripts/render-html.mjs" "$OUT/briefing-$DATE.md" --out "$OUT/brief
 | `check-diversity.mjs` | Exits non-zero when a section's primaries are all one outlet |
 | `check-provenance.mjs` | Exits non-zero when a story line lacks a `[src:]` reference or exactly one `[prov:*]` marker |
 | `fetch-page.mjs` | Reads an article page with retry and browser/plain profile variation; reports `dateSource` |
+| `check-research.mjs` | Exits non-zero on a research report that breaks the schema: a mis-tagged record, a same-outlet alternate, a headline that is not the page's own title |
 | `render-html.mjs` | Markdown to self-contained HTML |
 
 The two gates count different things: `check-diversity.mjs` counts only the
@@ -132,6 +132,15 @@ The two gates count different things: `check-diversity.mjs` counts only the
 story line - Top stories, both sections and the Watchlist, never a bullet in the
 Market snapshot, the Coverage note or the Sources and never an indented one - so
 the two item counts differ for the same briefing.
+
+## Tests
+
+Run from the skill root: `node --test` discovers and runs the
+`tests/*.test.mjs` suite (needs Node 20.11+); `node --test tests/*.test.mjs`
+names those files explicitly. Passing the directory is not equivalent - on
+Node 24 `node --test tests/` treats `tests` as a literal test-file path and
+exits 1 with `MODULE_NOT_FOUND`, where Node 20 recursed into a directory
+argument.
 
 ## Sourcing rules
 

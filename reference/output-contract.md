@@ -293,10 +293,12 @@ Global and China, a Coverage-note sub-heading other than the one optional
 no stories. Every one of those used to be possible to ship, and the first two
 used to take whole sections out of the gates' scope in silence.
 
-The note is paragraphs. Its one optional sub-heading is
-`### Additional notes / 补充说明`, at most one, after the fixed part, for notes
-that read better in Chinese; both gates refuse any other sub-heading there and
-refuse a story-shaped bullet anywhere in the note. A run used
+The note is short labelled lines, not prose - the fixed part above states each
+item as one line, and the variable part is at most one or two sentences. Its one
+optional sub-heading is `### Additional notes / 补充说明`, at most one, after the
+fixed part, for notes that read better in Chinese, under the same rule: one short
+line, not a paragraph. Both gates refuse any other sub-heading there and refuse a
+story-shaped bullet anywhere in the note. A run used
 `### Additional notes / 补充说明` on 2026-09-30, which nothing policed before.
 
 ## HTML features

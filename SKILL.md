@@ -23,7 +23,7 @@ trace to a real source. Nothing is invented, estimated, or padded.
 | Global scope | Major powers: US, EU/UK, Russia and Eastern Europe, China-world relations, Japan and the Koreas, Middle East, international institutions |
 | China scope | Mainland national, plus Hong Kong, Taiwan and Macau, and city-level stories when they are genuinely worth noting |
 | Volume | 20-25 distinct stories total; a Top story repeated in its section is one story but two story lines; allocated by importance; empty aspects are omitted |
-| Budget | 20-30 article-page fetches for a full run, about 3-5 minutes; that band is guidance for a 20-25-story run, and a deliberately smaller run legitimately makes fewer |
+| Budget | No fixed fetch count binds: coverage decides it, and a search-derived China section routinely runs past a band a feed-only run fits in; every article-page fetch is counted by URL in `.fetch-ledger.json` and stated in the coverage note |
 
 ## 2. Coverage window (never ask)
 
@@ -121,6 +121,10 @@ if [ -n "$BRIEFING_DIR" ]; then OUT="$BRIEFING_DIR"; else OUT="$PWD/briefings"; 
 mkdir -p "$OUT"
 STAGE="${OUT:?}/.staging/$(TZ=Asia/Shanghai date +%F)"
 mkdir -p "$STAGE"
+: > "$STAGE/.run-start"
+if [ -f "$OUT/briefing-state.json" ]; then
+  cp "$OUT/briefing-state.json" "$STAGE/briefing-state.seed.json"
+fi
 SKILL="${SKILL:-${DSH_HOME:-$HOME/.dsh}/skills/daily-news-briefing}"
 DATE=$(TZ=Asia/Shanghai date +%F)
 ~~~
@@ -150,6 +154,11 @@ All research scratch - subagent output, feed dumps, fetched pages - lives under
 `$STAGE`, and the run deletes that directory before it finishes (Step 7). The
 run's own artifacts - `.markets.json`, `.feeds.json`, `.items.json`,
 `.fetch-ledger.json` - stay in `$OUT`; staging holds nothing the run keeps.
+
+Step 1 leaves two files of its own in `$STAGE`: `.run-start`, the mark Step 7
+measures the run against, and `briefing-state.seed.json`, a copy of the state as
+it stood before `plan` or `update` touched it - the baseline Step 6's
+post-`update` repair restores. Step 7 clears both with the directory.
 
 ### Step 2 - Compute the window
 
@@ -218,22 +227,23 @@ citation until a fetch confirms it: web_search can return punycode IDN hosts
 because the punycode host's TLS certificate does not match, so that page cannot
 be fetched; and it can return 404 links for valid-looking articles (observed on
 Xinhua), so a title and link alone prove nothing. Cover both sections across all
-seven aspects, respecting the budget, and capture every candidate in the
-research-report schema in `reference/research-input.md`. That schema is
+seven aspects, and capture every candidate in the research-report schema in
+`reference/research-input.md`. That schema is
 mandatory; the subagent fan-out is not. Validate the report with
 `node "$SKILL/scripts/check-research.mjs" <report-path>` before any Markdown is
 written: it exits 0 when the report satisfies the schema, 1 on violations and 2
-on usage or an unreadable report. The 20-30 fetch target is a
-run-level budget for article-page fetches, not a per-agent one: the ledger is
-the union of every agent's fetches plus the orchestrator's own. Overlap between
-agents is only discovered after the fact, so budget the SUM of the allowances
-you hand out - that sum, not the hoped-for union, is what a budget can promise.
-`--retries` counts ROUNDS, not requests: each round is 2 header profiles x 2
-transports, so the default of 2 rounds is up to 8 requests per URL - while the
-ledger counts a URL once, not its requests. A failed probe counts: it was a fetch
-the run made. A search-derived China section commonly reaches the top of that
-band or passes it, and the overrun is disclosed in the coverage note, never
-hidden or re-counted. Each item must end with a
+on usage or an unreadable report. Fetches are counted, never capped. Count
+article-page fetches by URL - the ledger is the union of every agent's fetches
+plus the orchestrator's own, not a per-agent allowance - and state the resulting
+URL count in the coverage note. No fixed count binds, because coverage across two
+sections and seven aspects sets it: a search-derived China section routinely runs
+past any band a feed-only run fits in, and that is disclosed, never hidden or
+re-counted. `--retries` counts ROUNDS, not requests: each round is 2 header
+profiles x 2 transports, so the default of 2 rounds is up to 8 requests per URL -
+while the ledger counts a URL once, not its requests. A failed probe counts: it
+was a fetch the run made. Overlap between agents is only discovered after the
+fact, so budget the SUM of the allowances you hand out - that sum, not the
+hoped-for union, is what a budget can promise. Each item must end with a
 dated primary: a page whose own article body was obtained, a publisher's
 own RSS item, or - for blocked wire copy - a corroborating primary with the
 wire as an alt. A page that answered 200 but yielded no article body is
@@ -248,9 +258,10 @@ which a fresh shell cannot resolve, and require every scratch file to live there
 Run-level gate notes that the artifacts can check are computed from them, never
 recalled: at this point derive each from `$OUT/.feeds.json` and
 `$OUT/.markets.json`, and reconcile the note with them before writing it - a
-note that disagrees with the artifacts is wrong. The Step 6 coverage note also
-reconciles with `$OUT/.items.json`, which `md-to-items.mjs` writes in that
-step, so read it there and not here; at Step 4 that file is absent or stale. A
+note that disagrees with the artifacts is wrong. The coverage note's per-story-line
+counts come from `check-provenance.mjs`'s own first line at Step 6, not from here
+and not from any index: `.items.json` carries no provenance split, and at Step 4
+it is absent or stale. A
 quiet aspect is a claim about the world, not something a digest can settle, so
 that stays your own judgement.
 
@@ -289,8 +300,12 @@ when a foreign power is involved, and it overrides the placement tie-break, so a
 story *about* Hong Kong, Taiwan or Macau is China's wherever the event happens.
 Cross-section stories follow the placement tie-break in
 `reference/output-contract.md` for everything the rule above does not assign: the
-place the event happens decides the section; disclose the call in the coverage
-note.
+place the event happens decides the section, and it decides ahead of source
+language and scope. A China line for an event in China may be written from a
+Chinese-language page or from the publisher's own page - never a Chinese outlet's
+foreign-language edition - while `China-world relations` in the Global scope
+covers relations whose event happens outside China. Disclose the call in the
+coverage note.
 
 ### Step 6 - Write Markdown, render, update state
 
@@ -320,7 +335,8 @@ after `update` means editing the Markdown once the window is already closed.
 Re-running `plan` for that edit computes a window from the new baseline - under
 `MIN_WINDOW_SECONDS` - so `update` refuses it and the fresh `plannedWindow` is
 left behind for the next run to reuse. Get the note right in this pass; run
-`update` only once both gates have printed OK.
+`update` only once both gates have printed OK. The note itself is a set of short
+labelled lines, not prose; `reference/output-contract.md` carries its rule.
 
 `update` also refuses an `--items` file older than the window it would close -
 `md-to-items` runs after `plan`, so the index it writes is never that old - so a
@@ -350,9 +366,18 @@ gates pass again. Editing it **after** `update` has run is not a re-`plan` away:
 the window it computes is minutes wide and excludes everything the run just
 researched - a verification run on 2026-09-30 followed the old advice and got a
 six-minute window, which failed `check-research` on every record. Restore the
-state to the pre-update baseline (the run's own Step-1 seed) and replay Step 2
-through Step 6, so the window is the one the briefing covers; the index dedupes by
-date and title, so replaying cannot append the same entries twice. `--force` excuses only
+state from the seed Step 1 wrote -
+`cp "$STAGE/briefing-state.seed.json" "$OUT/briefing-state.json"` - with `OUT`
+and `STAGE` re-established in that same shell, and replay Step 2 through Step 6,
+so the window is the one the briefing covers. When Step 1's copy found no prior
+state, delete `$OUT/briefing-state.json` instead, which puts `plan` on its
+no-previous-briefing route. The index dedupes by date and title, so replaying
+cannot append the same entries twice. A replay may move the window end: `plan`
+recomputes from the restored baseline, so the replayed window ends after the one
+the first pass announced (2026-10-06: 24h ending 08:30 became 24.1h ending
+08:37). A replay therefore re-cuts the hours figure, the parenthesised span and
+the `generated` stamp in the same pass, and any label it reports is the one on
+disk. `--force` excuses only
 a short but positive window: a window whose end sits behind the recorded baseline
 is refused even with `--force`, because the baseline would move backwards.
 
@@ -361,13 +386,23 @@ is refused even with `--force`, because the baseline would move backwards.
 Present the HTML file, and summarize the same content in chat (never only a
 link). Keep the Markdown, the state JSON and the run artifacts `.markets.json`,
 `.feeds.json`, `.items.json` and `.fetch-ledger.json` in `$OUT`, but deliver only
-the HTML. Then
-delete the run's staging directory - the run's own, under Step 1's
+the HTML.
+
+The run must have written nothing outside `$OUT`, and Step 1's `.run-start` mark
+makes that measurable. The first command below lists every file under the working
+directory changed since Step 1, with `$OUT` pruned; empty output is the pass. Each
+path printed is a candidate, not a verdict: delete the ones this run wrote - they
+are scratch, and Step 1 confines scratch to `$STAGE` - and leave any this run
+cannot account for, naming it in the coverage note. This measurement runs before
+`.run-start` itself goes.
+
+Then delete the run's staging directory - the run's own, under Step 1's
 one-run-at-a-time rule for a shared `$OUT` - so every research scratch file goes
-with it and the next run starts from an empty path - the second line removes the
+with it and the next run starts from an empty path - the last line removes the
 `.staging` parent once it is empty:
 
 ~~~sh
+find "${PWD:?}" -name .staging -prune -o -path "${OUT:?}" -prune -o -newer "${STAGE:?}/.run-start" -type f -print
 rm -rf "${STAGE:?}"
 rmdir "${OUT:?}/.staging" 2>/dev/null || true
 ~~~
@@ -427,8 +462,8 @@ as `(quiet - 今日无重要新闻)`.
 - The coverage note repeats the header window **verbatim** (same dates and times
   in Asia/Shanghai as the label in parentheses), so the header and the note can
   never disagree about the window.
-- The coverage note states how many article-page fetches the run made, so an
-  overrun of the 20-30 target is visible; the target stays guidance, not a gate.
+- The coverage note states the run's article-page fetch count by URL; the ledger
+  is the record it comes from.
 - Quiet aspects are noted with the canonical marker in the section's own
   language (see section 5); nothing is padded to hit the item count.
 - The HTML is self-contained: header and content flow as one page with no

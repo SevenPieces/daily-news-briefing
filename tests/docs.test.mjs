@@ -109,3 +109,45 @@ test('the documented pre-Markdown invocation runs with the window plan actually 
   assert.ok(/Step 2's .window\.since. and .window\.until. copied/.test(doc),
     'the document must say the values are plan\'s own window fields');
 });
+
+test('every registry row the runs cited carries one canonical [src:] label (H2)', () => {
+  // Runtime finding: the registry mixed Chinese names, "Chinese (ENGLISH)" and
+  // English-only rows while telling runs to cite "the single form the registry
+  // gives it", so a China-section line had no label that satisfied the sentence
+  // and the diversity gate counted variant spellings as different outlets.
+  const doc = readFileSync(join(SKILL_ROOT, 'reference', 'sources.md'), 'utf8');
+  const lines = doc.split('\n');
+  const start = lines.findIndex((l) => /^\| *Label *\|/.test(l));
+  assert.ok(start > 0, 'the registry has no Label column');
+  const rows = [];
+  for (let i = start + 2; i < lines.length && lines[i].startsWith('|'); i++) rows.push(lines[i]);
+  assert.ok(rows.length >= 20, 'expected the Tier 1 rows, found ' + rows.length);
+  const byDomain = new Map();
+  for (const row of rows) {
+    const cells = row.split('|').slice(1, -1).map((c) => c.trim());
+    assert.equal(cells.length, 4, 'a registry row must have four cells: ' + row.slice(0, 70));
+    const [label, domain] = cells;
+    assert.ok(label.length > 0, 'a registry row has no Label: ' + domain);
+    assert.ok(!label.includes('('),
+      'the Label cell is the label alone, not a label plus its English name: ' + label);
+    // A row may name several domains for one publisher ("gmw.cn, politics.gmw.cn,
+    // m.gmw.cn"), so every token in the cell maps to that row's label.
+    for (const token of domain.split(',').map((d) => d.trim()).filter(Boolean)) byDomain.set(token, label);
+  }
+  // The publishers the six runtime days (2026-10-01 … 10-06) cited in the China
+  // section, and the label each must carry. Evidence: the [src:...] strings in
+  // those briefings.
+  const mustBeChinese = {
+    'news.cn': '新华网', 'gov.cn': '中国政府网', 'cnr.cn': '央广网', 'gmw.cn': '光明网',
+    'yicai.com': '第一财经', 'thepaper.cn': '澎湃新闻', 'caixin.com': '财新', 'cls.cn': '财联社',
+    'stcn.com': '证券时报', 'stats.gov.cn': '国家统计局', 'pbc.gov.cn': '中国人民银行',
+    'fmprc.gov.cn': '外交部', 'gwytb.gov.cn': '国务院台办', 'ce.cn': '中国经济网',
+    'cnstock.com': '上海证券报', 'jingjiribao.cn': '经济日报', 'news.gov.hk': '香港政府新闻网',
+  };
+  for (const [domain, label] of Object.entries(mustBeChinese)) {
+    assert.equal(byDomain.get(domain), label,
+      domain + ' must carry the label ' + label + ' that the runtime days printed');
+  }
+  assert.ok(doc.includes('Label` cell of the row it cites'),
+    'the document must say the Label cell is what a story line prints');
+});

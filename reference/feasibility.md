@@ -96,8 +96,11 @@ Both are discovery-only; a primary fetch is always required.
 
 ## Fetch budget
 
-Writing a summary requires reading the article, so stories are bounded by the
-fetch budget: with 20-30 fetches, target 20-25 distinct stories total.
+Writing a summary requires reading the article, so the article-page fetch count
+and the story count move together - from 20-30 fetches for a full run and the
+20-25 distinct-story target, both of them guidance rather than a gate. A
+search-derived China section routinely runs past the fetch band, and the run
+counts and discloses what it spent instead of capping it.
 
 ## Probe log 2026-09-18 - promoted outlets
 
